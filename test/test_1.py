@@ -26,9 +26,11 @@ class Test_1:
         test that the .o file is correctly generated
         """
 
+        g = base.Graph(datadir)
         source = Path(datadir) / 'hello.cpp'
         target = Path(datadir) / 'hello.o'
-        base.build_target(rule=gcc.make_obj, sources=[source], targets=[target])
+        g.add_rule(rule=gcc.make_obj, sources=[source], targets=[target])
+        g.draw('out.png')
 
     def test_2(self, datadir):
         """
@@ -37,7 +39,7 @@ class Test_1:
         with pytest.raises(base.SourceNotFoundException):
             source = Path(datadir) / 'hello.x'
             target = Path(datadir) / 'hello.o'
-            base.build_target(rule=wrong_make_obj, sources=[
+            base.build_target(rule=gcc.make_obj, sources=[
                 source], targets=[target])
 
     def test_3(self, datadir):
