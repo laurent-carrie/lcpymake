@@ -1,4 +1,4 @@
-from lcpymake import a
+from lcpymake import base, gcc
 from pathlib import Path
 import pytest
 from typing import List
@@ -28,24 +28,24 @@ class Test_1:
 
         source = Path(datadir) / 'hello.cpp'
         target = Path(datadir) / 'hello.o'
-        a.build_target(rule=a.make_obj, sources=[source], targets=[target])
+        base.build_target(rule=gcc.make_obj, sources=[source], targets=[target])
 
     def test_2(self, datadir):
         """
         test that if a source does not exist, it will be caught
         """
-        with pytest.raises(a.SourceNotFoundException):
+        with pytest.raises(base.SourceNotFoundException):
             source = Path(datadir) / 'hello.x'
             target = Path(datadir) / 'hello.o'
-            a.build_target(rule=wrong_make_obj, sources=[
+            base.build_target(rule=wrong_make_obj, sources=[
                 source], targets=[target])
 
     def test_3(self, datadir):
         """
         test that if the file is not generated, it will be caught
         """
-        with pytest.raises(a.TargetNotGeneratedException):
+        with pytest.raises(base.TargetNotGeneratedException):
             source = Path(datadir) / 'hello.cpp'
             target = Path(datadir) / 'hello.o'
-            a.build_target(rule=wrong_make_obj, sources=[
+            base.build_target(rule=wrong_make_obj, sources=[
                 source], targets=[target])
