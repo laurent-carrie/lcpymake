@@ -1,4 +1,4 @@
-from lcpymake import base, gcc
+from lcpymake import base, gcc, plot
 from pathlib import Path
 import pytest
 from typing import List
@@ -27,17 +27,15 @@ class Test_1:
         """
 
         g = base.Graph(datadir)
-        source_cpp = Path(datadir) / 'hello.cpp'
         target_cpp = Path(datadir) / 'hello.o'
-        source_cpp2 = Path(datadir) / 'toto.cpp'
         target_cpp2 = Path(datadir) / 'toto.o'
         target_exe = Path(datadir) / 'hello.exe'
-        g.add_rule(rule=gcc.make_obj, sources=[source_cpp], targets=[target_cpp])
-        g.add_rule(rule=gcc.make_obj, sources=[source_cpp2], targets=[target_cpp2])
         g.add_rule(rule=gcc.make_exe, sources=[
                    target_cpp, target_cpp2], targets=[target_exe])
+        g.complete_with_automatic_rules()
 
-        g.draw('out.png')
+        g.print()
+        plot.draw(g, 'out.png')
 
     def test_2(self, datadir):
         """

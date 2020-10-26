@@ -1,6 +1,6 @@
 import networkx as nx
 from pathlib import Path
-from typing import List, Callable, Set, Tuple
+from typing import List, Callable, Tuple
 import subprocess
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -47,7 +47,25 @@ class Graph:
         self.graph.add_edge(fromp.relative_to(self.basedir),
                             top.relative_to(self.basedir), rule=rule)
 
-    def draw(self, file):
+    def complete_with_automatic_rules(self):
+        done = False
+        while not done:
+            done = True
+            for node in nx.topological_sort(self.graph):
+                edges = self.graph.in_edges(node)
+                logging.info(f'CVVVVVVVVVVVVVVVVV {node}')
+                if len(edges) == 0:
+                    tuple = automatic_subprocess_rules.get(node.suffix)
+                    if tuple is not None:
+                        (source_suffix, command) = tuple
+
+                        source = node.with_suffix(source_suffix)
+                        self.add_path(self.basedir / source)
+                        self.add_edge(self.basedir / source, self.basedir / node,
+                                      command(self.basedir / source, self.basedir / node))
+                        done = False
+
+    def print(self):
         order = list(nx.topological_sort(self.graph))
         order.reverse()
         logging.info(order)
@@ -90,3 +108,10 @@ def subprocess_rule(rule):
 #    p = subprocess.run(['gcc', '-c', '-o', str(targets[0]), str(sources[0])])
 
     return f
+
+
+automatic_subprocess_rules = {}
+
+
+def add_automatic_subprocess_rule(source_suffix, target_suffix, command):
+    automatic_subprocess_rules[target_suffix] = (source_suffix, command)
