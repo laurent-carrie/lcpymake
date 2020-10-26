@@ -1,12 +1,11 @@
-import matplotlib.pyplot as plt
 import networkx as nx
 from pathlib import Path
-from typing import List, Callable, Set
+from typing import List, Callable, Set, Tuple
 import subprocess
 import logging
 logging.basicConfig(level=logging.INFO)
 
-Rule = Callable[[List[Path], List[Path]], subprocess.CompletedProcess]
+Rule = Tuple[str, Callable[[List[Path], List[Path]], subprocess.CompletedProcess]]
 
 
 class TargetNotGeneratedException(Exception):
@@ -26,6 +25,15 @@ class Edge:
         self.to_path = to_path
         self.rule = rule
 
+    def __str__(self):
+        return 'C'
+
+
+class Command:
+    def __init__(self, source: Path, target: Path):
+        self.source = source
+        self.target = target
+
 
 class Graph:
     def __init__(self, basedir: Path):
@@ -37,26 +45,27 @@ class Graph:
 
     def add_edge(self, fromp: Path, top: Path, rule: Rule):
         self.graph.add_edge(fromp.relative_to(self.basedir),
-                            top.relative_to(self.basedir))
+                            top.relative_to(self.basedir), rule=rule)
 
     def draw(self, file):
-        # plt.subplot(1,1,1)
-        # nx.draw(self.graph,with_labels=True)
-        # plt.savefig(str(file))
         order = list(nx.topological_sort(self.graph))
-        nodes = [order[0]]
-        logging.info(nodes)
-        while nodes:
-            source = nodes.pop()
-            for target in self.graph.neighbors(source):
-                logging.info(f'graph : {source} => {target}')
+        order.reverse()
+        logging.info(order)
+        for node in order:
+            logging.info(f'node : {node}')
+            edges = self.graph.in_edges(node)
+            for edge in edges:
+                (from_p, to_p) = edge
+                rule = self.graph.get_edge_data(from_p, to_p)['rule']
+                logging.info(f'... edge : {edge}')
+                logging.info(f'... rule : {rule}')
 
     def add_rule(self, rule: Rule, sources: List[Path], targets: List[Path]):
         for source in sources:
             self.add_path(source)
             for target in targets:
                 self.add_path(target)
-                self.add_edge(fromp=source, top=target, rule=rule)
+                self.add_edge(fromp=source, top=target, rule=rule([source], [target]))
 
     def build_target(self, rule: Rule, sources: List[Path], targets: List[Path]):
         for source in sources:
@@ -73,3 +82,11 @@ class Graph:
             logging.debug(f'test target {target}')
             if not target.exists():
                 raise TargetNotGeneratedException(target, p)
+
+
+def subprocess_rule(rule):
+    def f(a, b):
+        return rule(a, b)
+#    p = subprocess.run(['gcc', '-c', '-o', str(targets[0]), str(sources[0])])
+
+    return f

@@ -27,9 +27,16 @@ class Test_1:
         """
 
         g = base.Graph(datadir)
-        source = Path(datadir) / 'hello.cpp'
-        target = Path(datadir) / 'hello.o'
-        g.add_rule(rule=gcc.make_obj, sources=[source], targets=[target])
+        source_cpp = Path(datadir) / 'hello.cpp'
+        target_cpp = Path(datadir) / 'hello.o'
+        source_cpp2 = Path(datadir) / 'toto.cpp'
+        target_cpp2 = Path(datadir) / 'toto.o'
+        target_exe = Path(datadir) / 'hello.exe'
+        g.add_rule(rule=gcc.make_obj, sources=[source_cpp], targets=[target_cpp])
+        g.add_rule(rule=gcc.make_obj, sources=[source_cpp2], targets=[target_cpp2])
+        g.add_rule(rule=gcc.make_exe, sources=[
+                   target_cpp, target_cpp2], targets=[target_exe])
+
         g.draw('out.png')
 
     def test_2(self, datadir):
