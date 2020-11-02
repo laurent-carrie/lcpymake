@@ -130,10 +130,7 @@ class Graph:
                 edges = self.graph.in_edges(node_key)
                 for edge in edges:
                     (from_p, to_p) = edge
-                    # rule = self.graph.get_edge_data(from_p, to_p)['rule']
-                    # logging.info(f'... edge : {edge}')
-                    print(f'... ... {from_p}')
-                    # logging.info(f'... rule : {rule}')
+                    print(f'... {from_p}')
 
     def add_explicit_rule(self, rule, sources: List[Path], targets: List[Path]):
         for s in sources:
