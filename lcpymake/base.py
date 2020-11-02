@@ -6,7 +6,15 @@ from pathlib import Path
 from typing import List, Callable, Tuple
 import subprocess
 import logging
+import uuid
+
 logging.basicConfig(level=logging.INFO)
+
+
+class Rule:
+    def __init__(self, info: str, run):
+        self.info = info
+        self.run = run
 
 
 class TargetNotGeneratedException(Exception):
@@ -25,6 +33,11 @@ class NodeAlreadyThere(Exception):
         self.path = path
 
 
+class NodeAlreadyHasARule(Exception):
+    def __init__(self, path: Path):
+        self.path = path
+
+
 class CannotAddEdgeItWouldMakeALoop(Exception):
     def __init__(self, path1: Path, path2: Path):
         self.path1 = path1
@@ -32,6 +45,11 @@ class CannotAddEdgeItWouldMakeALoop(Exception):
 
 
 class CannotAddARuleForASourceNode(Exception):
+    def __init__(self, path: Path):
+        self.path = path
+
+
+class NoSuchNode(Exception):
     def __init__(self, path: Path):
         self.path = path
 
@@ -44,6 +62,7 @@ class Node:
     def __init__(self, path: Path, is_source: bool):
         self.path = path
         self.is_source = is_source
+        self.rule_info = None
 
     def __repr__(self):
         return f'{self.path}'
@@ -62,7 +81,7 @@ class Edge:
     def __init__(self, from_path: Path, to_path: Path, rule):
         self.from_path = from_path
         self.to_path = to_path
-        self.rule = rule
+        self.rule_info = None
 
     def __str__(self):
         return 'C'
@@ -124,21 +143,39 @@ class Graph:
                         text = colored(node, 'red', attrs=[])
                 else:
                     text = colored(node, 'blue', attrs=[])
+                    info = 'no rule'
+                    if node.rule_info is not None:
+                        info = node.rule_info
+                    text = text + '\n... rule : ' + colored(info, 'blue', attrs=[])
 
                 print(text)
 
                 edges = self.graph.in_edges(node_key)
                 for edge in edges:
                     (from_p, to_p) = edge
-                    print(f'... {from_p}')
+                    print(f'... source : {from_p}')
 
-    def add_explicit_rule(self, rule, sources: List[Path], targets: List[Path]):
+    def add_explicit_rule(self, sources: List[Path], targets: List[Path], rule: Rule):
+        # self.graph.add_node(uuid.uuid1())
+        rule_info = 'no rule'
+        if rule is not None:
+            rule_info = rule(sources, targets).info
+
         for s in sources:
             for t in targets:
+                if self.graph.nodes.get(t) is None:
+                    raise NoSuchNode(t)
+                if self.graph.nodes.get(s) is None:
+                    raise NoSuchNode(s)
                 target_node: Node = self.graph.nodes[t]['node']
                 if target_node.is_source:
                     raise CannotAddARuleForASourceNode(target_node)
+
                 self.graph.add_edge(s, t)
+
+                if target_node.rule_info is not None and target_node.rule_info != rule_info:
+                    raise NodeAlreadyHasARule(target_node)
+                target_node.rule_info = rule_info
 
                 for component in nx.strongly_connected_components(self.graph):
                     if len(component) > 1:

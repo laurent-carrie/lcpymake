@@ -4,6 +4,9 @@ from pathlib import Path
 
 def main():
 
+    # step 1 : we declare a build graph, using nodes and explicit rules
+    # implementing implicit rules, rules and scanner will come later
+
     here = Path(__file__).parent
 
     # a build graph.
@@ -12,12 +15,13 @@ def main():
     g = base.Graph(sourcedir=here / 'src', builddir=here / 'build-step-1')
 
     # add source files
-    g.add_source_node('hello.cpp')
-    g.add_source_node('titi.cpp')
+    g.add_source_node('foo.cpp')
+    g.add_source_node('bar.cpp')
+    g.add_source_node('missing-foo.cpp')
 
     # add built files
-    g.add_built_node('hello.o')
-    g.add_built_node('titi.o')
+    g.add_built_node('foo.o')
+    g.add_built_node('bar.o')
     g.add_built_node('hello')
 
     # print the graph
@@ -28,9 +32,9 @@ def main():
 
     # add explicit rules. For now, there is no code in the rule
     # it is just to build the graph
-    g.add_explicit_rule(sources=['hello.cpp'], targets=['hello.o'], rule=None)
-    g.add_explicit_rule(sources=['titi.cpp'], targets=['titi.o'], rule=None)
-    g.add_explicit_rule(sources=['hello.o', 'titi.o'], targets=['hello'], rule=None)
+    g.add_explicit_rule(sources=['bar.cpp'], targets=['bar.o'], rule=None)
+    g.add_explicit_rule(sources=['foo.cpp'], targets=['foo.o'], rule=None)
+    g.add_explicit_rule(sources=['foo.o', 'bar.o'], targets=['hello'], rule=None)
 
     print('graph after adding rules')
     g.print()
