@@ -5,7 +5,7 @@ from pathlib import Path
 def main():
 
     # step 1 : we declare a build graph, using nodes and explicit rules
-    # implementing implicit rules, rules and scanner will come later
+    # using implicit rules, implemeting rules and scanner will come later
 
     here = Path(__file__).parent
 

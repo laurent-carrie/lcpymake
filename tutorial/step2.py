@@ -4,6 +4,8 @@ from typing import List
 
 import subprocess
 
+import step1
+
 
 def compile_rule(sources: List[Path], targets: List[Path]) -> base.Rule:
     # this is a rule : a function that takes sources and targets
@@ -43,11 +45,6 @@ def link_rule(sources, targets):
 
 def main():
 
-    # same as step 1, but we want want to mount
-    # mount means copy the source files in the build directoryh
-
-    here = Path(__file__).parent
-
     # step 1 : we declare a build graph, using nodes and explicit rules
     # implementing implicit rules, rules and scanner will come later
 
@@ -71,6 +68,8 @@ def main():
 
     print('graph after adding rules')
     g.print()
+
+    return g
 
 
 if __name__ == '__main__':

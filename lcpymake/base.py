@@ -180,3 +180,20 @@ class Graph:
                     if len(component) > 1:
                         self.graph.remove_edge(s, t)
                         raise CannotAddEdgeItWouldMakeALoop(s, t)
+
+    def remove_node(self, path):
+        self.graph.remove_node(path)
+
+    def build(self):
+        for node_key in self.graph.nodes:
+            node = self.graph.nodes[node_key]['node']
+            if not node.is_source:
+                continue
+
+            source = self.sourcedir / node.path
+            if not source.exists():
+                raise SourceNotFoundException(source)
+            target = self.builddir / node.path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            print(f'copy {source} to {target}')
+            target.write_bytes(source.read_bytes())

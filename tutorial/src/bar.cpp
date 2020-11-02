@@ -1,4 +1,5 @@
 #include <iostream>
+#include "bar.h"
 
 int bar(int i) {
     return i ;
