@@ -1,6 +1,6 @@
 from typing import List
 import subprocess
-from lcpymake.base import subprocess_rule, add_automatic_subprocess_rule, Command
+# from lcpymake.base import subprocess_rule, add_automatic_subprocess_rule, Command
 from pathlib import Path
 
 
@@ -10,11 +10,11 @@ def make_obj(source: Path, target: Path):
     return command
 
 
-add_automatic_subprocess_rule('.cpp', '.o', make_obj)
+# add_automatic_subprocess_rule('.cpp', '.o', make_obj)
 
 
-@subprocess_rule
-def make_exe(sources: List[Path], targets: [Path]) -> Command:
+# @subprocess_rule
+def make_exe(sources: List[Path], targets: [Path]):
     assert(len(targets) == 1)
 
     command = ['gcc', '-o', str(targets[0])]

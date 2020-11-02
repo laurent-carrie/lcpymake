@@ -22,37 +22,27 @@ def wrong_make_obj(sources: List[Path], targets: [Path]) -> subprocess.Completed
 class Test_1:
 
     def test_1(self, datadir):
-        """
-        test that the .o file is correctly generated
-        """
+        g = base.Graph(sourcedir=(datadir), builddir=None)
+        g.add_source_node('hello.cpp')
+        g.add_source_node('titi.cpp')
+        g.add_built_node('hello.o')
+        g.add_built_node('titi.o')
+        g.add_built_node('hello')
 
-        g = base.Graph(datadir)
-        target_cpp = Path(datadir) / 'hello.o'
-        target_cpp2 = Path(datadir) / 'toto.o'
-        target_exe = Path(datadir) / 'hello.exe'
-        g.add_rule(rule=gcc.make_exe, sources=[
-                   target_cpp, target_cpp2], targets=[target_exe])
-        g.complete_with_automatic_rules()
+        with pytest.raises(base.NodeAlreadyThere):
+            g.add_source_node('hello.cpp')
 
+        with pytest.raises(base.CannotAddARuleForASourceNode):
+            g.add_explicit_rule(sources=['hello.o'], targets=['hello.cpp'], rule=None)
+
+        g.add_explicit_rule(sources=['hello.o', 'titi.o'], targets=['hello'], rule=None)
+
+        with pytest.raises(base.CannotAddEdgeItWouldMakeALoop):
+            g.add_explicit_rule(sources=['hello'], targets=['hello.o'], rule=None)
+
+        g.add_explicit_rule(sources=['hello.cpp'], targets=['hello.o'], rule=None)
+        g.add_explicit_rule(sources=['titi.cpp'], targets=['titi.o'], rule=None)
+        g.add_explicit_rule(sources=['hello.o', 'titi.o'], targets=['hello'], rule=None)
         g.print()
-        plot.draw(g, 'out.png')
 
-    def test_2(self, datadir):
-        """
-        test that if a source does not exist, it will be caught
-        """
-        with pytest.raises(base.SourceNotFoundException):
-            source = Path(datadir) / 'hello.x'
-            target = Path(datadir) / 'hello.o'
-            base.build_target(rule=gcc.make_obj, sources=[
-                source], targets=[target])
-
-    def test_3(self, datadir):
-        """
-        test that if the file is not generated, it will be caught
-        """
-        with pytest.raises(base.TargetNotGeneratedException):
-            source = Path(datadir) / 'hello.cpp'
-            target = Path(datadir) / 'hello.o'
-            base.build_target(rule=wrong_make_obj, sources=[
-                source], targets=[target])
+        assert False
