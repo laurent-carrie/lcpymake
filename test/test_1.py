@@ -19,6 +19,10 @@ def wrong_make_obj(sources: List[Path], targets: [Path]) -> subprocess.Completed
     return p
 
 
+def rule_1(sources, targets):
+    return base.Rule(info='blah blah', run=None)
+
+
 class Test_1:
 
     def test_1(self, datadir):
@@ -42,7 +46,9 @@ class Test_1:
 
         g.add_explicit_rule(sources=['hello.cpp'], targets=['hello.o'], rule=None)
         g.add_explicit_rule(sources=['titi.cpp'], targets=['titi.o'], rule=None)
-        g.add_explicit_rule(sources=['hello.o', 'titi.o'], targets=['hello'], rule=None)
-        g.print()
 
-        assert False
+        with pytest.raises(base.NodeAlreadyHasARule):
+            g.add_explicit_rule(sources=['hello.o', 'titi.o'],
+                                targets=['hello'], rule=rule_1)
+
+        g.print()

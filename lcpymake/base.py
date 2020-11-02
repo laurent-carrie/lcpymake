@@ -171,11 +171,10 @@ class Graph:
                 if target_node.is_source:
                     raise CannotAddARuleForASourceNode(target_node)
 
-                self.graph.add_edge(s, t)
-
                 if target_node.rule_info is not None and target_node.rule_info != rule_info:
                     raise NodeAlreadyHasARule(target_node)
                 target_node.rule_info = rule_info
+                self.graph.add_edge(s, t)
 
                 for component in nx.strongly_connected_components(self.graph):
                     if len(component) > 1:
