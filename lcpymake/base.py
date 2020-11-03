@@ -126,14 +126,6 @@ class Graph:
             raise NodeAlreadyThere(path)
         self.graph.add_node(str(path), node=node)
 
-    def to_json(self):
-        d = {}
-        for node in self.graph.nodes:
-            d[str(node.path)] = {
-                'path': str(node.path)
-            }
-        return json.dumps(d)
-
     def is_source_node_ok(self, node: Node):
         if not str(node.path) in self.graph.nodes:
             raise Exception('cannot call node in source, node {node}')
@@ -192,10 +184,29 @@ class Graph:
                 break
             rec_print(0, candidate)
 
-    def add_explicit_rule(self, sources: List[Path], targets: List[Path], rule: Rule):
-        rule_info = 'no rule'
-        if rule is not None:
-            rule_info = rule(sources, targets).info
+    def to_json(self):
+        j = {}
+        for node_key in self.graph.nodes:
+            gnode = self.graph.nodes[node_key]
+            node = gnode['node']
+            j[node_key] = {'path': node.path, 'is_source': node.is_source,
+                           'rule': node.rule_info, 'preds': []}
+            edges = self.graph.in_edges(node_key)
+            for (from_node, to_node) in edges:
+                j[node_key]['preds'].append(from_node)
+
+        return j
+
+    def add_explicit_rule(self, sources: List[Path], targets: List[Path], rule):
+
+        if rule is None:
+            raise ValueError('cannot have a None rule')
+        rule_info = rule(sources, targets).info
+
+        for t in targets:
+            target_node: Node = self.graph.nodes[t]['node']
+            if target_node.rule_info is not None:
+                raise NodeAlreadyHasARule(target_node)
 
         for s in sources:
             for t in targets:
@@ -207,9 +218,6 @@ class Graph:
                 if target_node.is_source:
                     raise CannotAddARuleForASourceNode(target_node)
 
-                if target_node.rule_info is not None and target_node.rule_info != rule_info:
-                    raise NodeAlreadyHasARule(target_node)
-                target_node.rule_info = rule_info
                 self.graph.add_edge(s, t, rule_info=rule_info)
                 self.graph.edges[s, t].update({'rule': rule})
 
@@ -217,6 +225,7 @@ class Graph:
                     if len(component) > 1:
                         self.graph.remove_edge(s, t)
                         raise CannotAddEdgeItWouldMakeALoop(s, t)
+                target_node.rule_info = rule_info
 
     def remove_node(self, path):
         self.graph.remove_node(path)
