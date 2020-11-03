@@ -60,15 +60,19 @@ def main():
     g.add_source_node('foo.cpp')
     g.add_source_node('bar.cpp')
     g.add_source_node('missing-foo.cpp')
+    g.add_source_node('other.cpp')
 
     # add built files
     g.add_built_node('foo.o')
     g.add_built_node('bar.o')
+    g.add_built_node('other.o')
     g.add_built_node('hello')
 
     g.add_explicit_rule(sources=['bar.cpp'], targets=['bar.o'], rule=compile_rule)
     g.add_explicit_rule(sources=['foo.cpp'], targets=['foo.o'], rule=compile_rule)
-    g.add_explicit_rule(sources=['foo.o', 'bar.o'], targets=['hello'], rule=link_rule)
+    g.add_explicit_rule(sources=['other.cpp'], targets=['other.o'], rule=compile_rule)
+    g.add_explicit_rule(sources=['foo.o', 'bar.o', 'other.o'],
+                        targets=['hello'], rule=link_rule)
 
     print('graph after adding rules')
     g.print()

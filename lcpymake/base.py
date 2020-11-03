@@ -57,7 +57,8 @@ class NoSuchNode(Exception):
 class NodeStatus(Enum):
     SOURCE_PRESENT = 1
     SOURCE_MISSING = 2
-    BUILT = 3
+    BUILT_PRESENT = 3
+    BUILT_MISSING = 4
 
 
 class Node:
@@ -108,7 +109,10 @@ class Graph:
             else:
                 return NodeStatus.SOURCE_MISSING
         else:
-            return NodeStatus.BUILT
+            if (self.builddir / node.path).exists():
+                return NodeStatus.BUILT_PRESENT
+            else:
+                return NodeStatus.BUILT_MISSING
 
     def add_source_node(self, path: Path):
         node = Node(path=path, is_source=True)
@@ -165,8 +169,10 @@ class Graph:
                 line1 = colored(node.path, 'green', attrs=[]) + ' (source)'
             elif self.node_status(node) == NodeStatus.SOURCE_MISSING:
                 line1 = colored(node.path, 'red', attrs=['blink']) + ' (missing source)'
-            elif self.node_status(node) == NodeStatus.BUILT:
-                line1 = colored(node, 'blue', attrs=[])
+            elif self.node_status(node) == NodeStatus.BUILT_PRESENT:
+                line1 = colored(node, 'blue', attrs=[]) + ' (built present)'
+            elif self.node_status(node) == NodeStatus.BUILT_MISSING:
+                line1 = colored(node, 'blue', attrs=['reverse']) + ' (built missing)'
             else:
                 raise Exception('internal error')
 
