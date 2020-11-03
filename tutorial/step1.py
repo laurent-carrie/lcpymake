@@ -36,7 +36,7 @@ def main():
     g.add_explicit_rule(sources=['foo.cpp'], targets=['foo.o'], rule=None)
     g.add_explicit_rule(sources=['foo.o', 'bar.o'], targets=['hello'], rule=None)
 
-    print('graph after adding rules')
+    print('\n\n\n\n\ngraph after adding rules')
     g.print()
 
 

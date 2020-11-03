@@ -13,6 +13,10 @@ def compile_rule(sources: List[Path], targets: List[Path]) -> base.Rule:
     # and returns a tuple : a string for information purpose,
     # and a function to run.
     # this function should return True on success and False on error
+    #
+    # it is voluntary that the sources and targets are provided as arguments
+    # of the rule, and not of the run method : this is for easy debugging
+    # of your build tree, without running it
     assert len(sources) == 1
     source = sources[0]
     assert len(targets) == 1

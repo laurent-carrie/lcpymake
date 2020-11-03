@@ -55,7 +55,9 @@ class NoSuchNode(Exception):
 
 
 class NodeStatus(Enum):
-    PRESENT_IN_SOURCES = 1
+    SOURCE_PRESENT = 1
+    SOURCE_MISSING = 2
+    BUILT = 3
 
 
 class Node:
@@ -99,6 +101,15 @@ class Graph:
         self.builddir = builddir
         self.graph = nx.DiGraph()
 
+    def node_status(self, node: Node) -> NodeStatus:
+        if node.is_source:
+            if (self.sourcedir / node.path).exists():
+                return NodeStatus.SOURCE_PRESENT
+            else:
+                return NodeStatus.SOURCE_MISSING
+        else:
+            return NodeStatus.BUILT
+
     def add_source_node(self, path: Path):
         node = Node(path=path, is_source=True)
         if str(path) in self.graph.nodes:
@@ -132,31 +143,50 @@ class Graph:
         # order.reverse()
         # logging.info(order)
 
-        for component in nx.strongly_connected_components(self.graph):
-            for node_key in component:
-                node = self.graph.nodes[node_key]['node']
-                if node.is_source:
-                    if self.is_source_node_ok(node):
-                        # text = colored(node, 'red', attrs=['reverse', 'blink'])
-                        text = colored(node, 'green', attrs=[])
-                    else:
-                        text = colored(node, 'red', attrs=[])
-                else:
-                    text = colored(node, 'blue', attrs=[])
-                    info = 'no rule'
-                    if node.rule_info is not None:
-                        info = node.rule_info
-                    text = text + '\n... rule : ' + colored(info, 'blue', attrs=[])
+        seen_nodes_keys = []
 
-                print(text)
+        def look_for_candidate():
+            for node_key in self.graph.nodes:
+                assert (type(node_key) == str)
+                if node_key in seen_nodes_keys:
+                    continue
+                edges = self.graph.out_edges(node_key)
+                if len(edges) == 0:
+                    return node_key
+            return None
 
-                edges = self.graph.in_edges(node_key)
-                for edge in edges:
-                    (from_p, to_p) = edge
-                    print(f'... source : {from_p}')
+        def rec_print(indent, node_key):
+            if node_key in seen_nodes_keys:
+                return
+            seen_nodes_keys.append(node_key)
+            node = self.graph.nodes[node_key]['node']
+            if self.node_status(node) == NodeStatus.SOURCE_PRESENT:
+                # text = colored(node, 'red', attrs=['reverse', 'blink'])
+                line1 = colored(node.path, 'green', attrs=[]) + ' (source)'
+            elif self.node_status(node) == NodeStatus.SOURCE_MISSING:
+                line1 = colored(node.path, 'red', attrs=['blink']) + ' (missing source)'
+            elif self.node_status(node) == NodeStatus.BUILT:
+                line1 = colored(node, 'blue', attrs=[])
+            else:
+                raise Exception('internal error')
+
+            print(f"{'... ' * indent} > {line1}")
+            if not node.is_source:
+                print(f"{'... ' * (indent + 1)} {node.rule_info}")
+
+            edges = self.graph.in_edges(node_key)
+            for edge in edges:
+                (from_p, to_p) = edge
+                # print(f'... source : {from_p}')
+                rec_print(indent + 1, from_p)
+
+        while True:
+            candidate = look_for_candidate()
+            if candidate is None:
+                break
+            rec_print(0, candidate)
 
     def add_explicit_rule(self, sources: List[Path], targets: List[Path], rule: Rule):
-        # self.graph.add_node(uuid.uuid1())
         rule_info = 'no rule'
         if rule is not None:
             rule_info = rule(sources, targets).info
