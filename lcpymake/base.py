@@ -65,7 +65,6 @@ class Node:
     def __init__(self, path: Path, is_source: bool):
         self.path = str(path)
         self.is_source = is_source
-        self.rule_info = None
 
     def __repr__(self):
         return f'{self.path}'
@@ -134,6 +133,19 @@ class Graph:
                 'does not make sense to call this function on a non source node')
         return (self.sourcedir / node.path).exists()
 
+    def rule_info(self, node: Node):
+        edges = self.graph.in_edges(node.path)
+        sources = [self.graph.nodes[from_p]['node'].path for (from_p, _) in edges]
+
+        for e in edges:
+            # @TODO fix multi targets
+            (_, target) = e
+            rule: Rule = self.graph.edges[e]['rule'](sources=sources, targets=[target])
+            info = rule.info
+            return info
+        else:
+            return None
+
     def print(self):
         # order = list(nx.topological_sort(self.graph))
         # order.reverse()
@@ -190,7 +202,7 @@ class Graph:
             gnode = self.graph.nodes[node_key]
             node = gnode['node']
             j[node_key] = {'path': node.path, 'is_source': node.is_source,
-                           'rule': node.rule_info, 'preds': [], 'status': self.node_status(node).name}
+                           'rule': self.rule_info(node), 'preds': [], 'status': self.node_status(node).name}
             edges = self.graph.in_edges(node_key)
             for (from_node, to_node) in edges:
                 j[node_key]['preds'].append(from_node)
@@ -207,7 +219,7 @@ class Graph:
             if gnode is None:
                 raise NoSuchNode(t)
             target_node: Node = gnode['node']
-            if target_node.rule_info is not None:
+            if self.rule_info(target_node) is not None:
                 raise NodeAlreadyHasARule(target_node)
 
         for s in sources:
