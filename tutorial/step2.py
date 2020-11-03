@@ -54,7 +54,7 @@ def main():
 
     here = Path(__file__).parent
 
-    g = base.Graph(sourcedir=here / 'src', builddir=here / 'build-step-2')
+    g = base.Graph(sourcedir=here / 'src', sandbox=here / 'build-step-2')
 
     # add source files
     g.add_source_node('foo.cpp')

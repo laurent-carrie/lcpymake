@@ -17,8 +17,8 @@ def main():
 
     # a build graph.
     # sourcedir is the root of the sources,
-    # builddir is where the build will take place.
-    g = base.Graph(sourcedir=here / 'src', builddir=here / 'build-step-1')
+    # sandbox is where the build will take place.
+    g = base.Graph(sourcedir=here / 'src', sandbox=here / 'build-step-1')
 
     # add source files
     g.add_source_node('foo.cpp')
@@ -35,7 +35,6 @@ def main():
     # red are source files that don't exist (error !)
     # blue are built files
     g.print()
-    print(g.to_json())
 
     # add explicit rules. For now, there is no code in the rule
     # it is just to build the graph

@@ -119,7 +119,7 @@ def ok_graph(g):
 class Test_1:
 
     def test_graph(self, datadir):
-        g = base.Graph(sourcedir=(datadir), builddir=datadir / 'tmp')
+        g = base.Graph(sourcedir=(datadir), sandbox=datadir / 'tmp')
         g.add_source_node('hello.cpp')
         g.add_source_node('titi.cpp')
         g.add_built_node('hello.o')
@@ -229,7 +229,7 @@ class Test_1:
                                 targets=['hello'], rule=rule_1)
 
     def test_build(self, datadir):
-        g = base.Graph(sourcedir=(datadir), builddir=datadir / 'tmp')
+        g = base.Graph(sourcedir=(datadir), sandbox=datadir / 'tmp')
         ok_graph(g)
         g.build()
         assert g.to_json() == {'bar.cpp': {'is_source': True,
@@ -270,7 +270,7 @@ class Test_1:
 
     def test_build_unconnected(self, datadir):
         datadir = Path(datadir)
-        g = base.Graph(sourcedir=(datadir), builddir=datadir / 'tmp')
+        g = base.Graph(sourcedir=(datadir), sandbox=datadir / 'tmp')
         ok_graph(g)
         g.remove_node('hello')
         g.remove_node('foo.cpp')

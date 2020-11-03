@@ -96,9 +96,9 @@ class Command:
 
 
 class Graph:
-    def __init__(self, sourcedir: Path, builddir: Path):
+    def __init__(self, sourcedir: Path, sandbox: Path):
         self.sourcedir = sourcedir
-        self.builddir = builddir
+        self.sandbox = sandbox
         self.graph = nx.DiGraph()
 
     def node_status(self, node: Node) -> NodeStatus:
@@ -108,7 +108,7 @@ class Graph:
             else:
                 return NodeStatus.SOURCE_MISSING
         else:
-            if (self.builddir / node.path).exists():
+            if (self.sandbox / node.path).exists():
                 return NodeStatus.BUILT_PRESENT
             else:
                 return NodeStatus.BUILT_MISSING
@@ -253,14 +253,14 @@ class Graph:
             source = self.sourcedir / node.path
             if not source.exists():
                 raise SourceNotFoundException(source)
-            target = self.builddir / node.path
+            target = self.sandbox / node.path
             target.parent.mkdir(parents=True, exist_ok=True)
             print(f'copy {source} to {target}')
             target.write_bytes(source.read_bytes())
 
     def build(self):
         self.mount()
-        self.builddir.mkdir(parents=True, exist_ok=True)
+        self.sandbox.mkdir(parents=True, exist_ok=True)
 
         def look_for_candidate():
             """
@@ -291,15 +291,15 @@ class Graph:
             # node = self.graph.nodes[candidate_key]['node']
             edges = self.graph.in_edges(candidate_key)
             sources = [self.graph.nodes[key]['node'] for (key, _) in edges]
-            exist = {(self.builddir / source.path).exists() for source in sources}
+            exist = {(self.sandbox / source.path).exists() for source in sources}
             if exist == {True}:
                 source_nodes: List[Node] = [self.graph.nodes[node_key]['node']
                                             for (node_key, _) in edges]
                 target_nodes: List[Node] = [self.graph.nodes[node_key]['node']
                                             for (_, node_key) in edges]
-                sources: List[Path] = [self.builddir / s.path for s in source_nodes]
+                sources: List[Path] = [self.sandbox / s.path for s in source_nodes]
                 targets: List[Path] = list(
-                    {self.builddir / t.path for t in target_nodes})
+                    {self.sandbox / t.path for t in target_nodes})
 
                 for (a, b) in edges:
                     rule = self.graph.get_edge_data(a, b).get('rule', None)
