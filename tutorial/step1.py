@@ -1,6 +1,12 @@
 from lcpymake import base
 from pathlib import Path
 
+# a rule that doesn't do anything
+
+
+def dnr(sources, targets):
+    return base.Rule('do nothing rule', lambda: None)
+
 
 def main():
 
@@ -33,9 +39,9 @@ def main():
 
     # add explicit rules. For now, there is no code in the rule
     # it is just to build the graph
-    g.add_explicit_rule(sources=['bar.cpp'], targets=['bar.o'], rule=None)
-    g.add_explicit_rule(sources=['foo.cpp'], targets=['foo.o'], rule=None)
-    g.add_explicit_rule(sources=['foo.o', 'bar.o'], targets=['hello'], rule=None)
+    g.add_explicit_rule(sources=['bar.cpp'], targets=['bar.o'], rule=dnr)
+    g.add_explicit_rule(sources=['foo.cpp'], targets=['foo.o'], rule=dnr)
+    g.add_explicit_rule(sources=['foo.o', 'bar.o'], targets=['hello'], rule=dnr)
 
     print('\n\n\n\n\ngraph after adding rules')
     g.print()

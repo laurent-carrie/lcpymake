@@ -182,7 +182,7 @@ class Graph:
 
             print(f"{'... ' * indent} > {line1}")
             if not node.is_source:
-                print(f"{'... ' * (indent + 1)} {node.rule_info}")
+                print(f"{'... ' * (indent + 1)} {self.rule_info(node)}")
 
             edges = self.graph.in_edges(node_key)
             for edge in edges:
