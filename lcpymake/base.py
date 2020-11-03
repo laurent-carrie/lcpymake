@@ -63,7 +63,7 @@ class NodeStatus(Enum):
 
 class Node:
     def __init__(self, path: Path, is_source: bool):
-        self.path = path
+        self.path = str(path)
         self.is_source = is_source
         self.rule_info = None
 
@@ -190,7 +190,7 @@ class Graph:
             gnode = self.graph.nodes[node_key]
             node = gnode['node']
             j[node_key] = {'path': node.path, 'is_source': node.is_source,
-                           'rule': node.rule_info, 'preds': []}
+                           'rule': node.rule_info, 'preds': [], 'status': self.node_status(node).name}
             edges = self.graph.in_edges(node_key)
             for (from_node, to_node) in edges:
                 j[node_key]['preds'].append(from_node)
@@ -198,13 +198,15 @@ class Graph:
         return j
 
     def add_explicit_rule(self, sources: List[Path], targets: List[Path], rule):
-
         if rule is None:
             raise ValueError('cannot have a None rule')
         rule_info = rule(sources, targets).info
 
         for t in targets:
-            target_node: Node = self.graph.nodes[t]['node']
+            gnode = self.graph.nodes.get(t, None)
+            if gnode is None:
+                raise NoSuchNode(t)
+            target_node: Node = gnode['node']
             if target_node.rule_info is not None:
                 raise NodeAlreadyHasARule(target_node)
 
@@ -246,6 +248,7 @@ class Graph:
 
     def build(self):
         self.mount()
+        self.builddir.mkdir(parents=True, exist_ok=True)
 
         def one_build():
             for node_key in self.graph.nodes:
@@ -260,14 +263,15 @@ class Graph:
                 if exist == {True}:
                     sources = [self.builddir / self.graph.nodes[node_key]
                                ['node'].path for (node_key, _) in edges]
-                    targets = [self.builddir / self.graph.nodes[node_key]
-                               ['node'].path for (_, node_key) in edges]
+                    targets = list({self.builddir / self.graph.nodes[node_key]
+                                    ['node'].path for (_, node_key) in edges})
 
                     for (a, b) in edges:
                         rule = self.graph.get_edge_data(a, b).get('rule', None)
                     print(sources)
                     print(targets)
                     print(rule)
-                    rule(sources=sources, targets=targets).run()
+                    result_ok = rule(sources=sources, targets=targets).run()
+                    logging.info(f'result ok : {result_ok}')
 
         one_build()

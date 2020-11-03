@@ -29,6 +29,7 @@ def main():
     # red are source files that don't exist (error !)
     # blue are built files
     g.print()
+    print(g.to_json())
 
     # add explicit rules. For now, there is no code in the rule
     # it is just to build the graph
