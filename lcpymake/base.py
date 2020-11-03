@@ -174,7 +174,8 @@ class Graph:
                 if target_node.rule_info is not None and target_node.rule_info != rule_info:
                     raise NodeAlreadyHasARule(target_node)
                 target_node.rule_info = rule_info
-                self.graph.add_edge(s, t)
+                self.graph.add_edge(s, t, rule_info=rule_info)
+                self.graph.edges[s, t].update({'rule': rule})
 
                 for component in nx.strongly_connected_components(self.graph):
                     if len(component) > 1:
@@ -184,7 +185,7 @@ class Graph:
     def remove_node(self, path):
         self.graph.remove_node(path)
 
-    def build(self):
+    def mount(self):
         for node_key in self.graph.nodes:
             node = self.graph.nodes[node_key]['node']
             if not node.is_source:
@@ -197,3 +198,31 @@ class Graph:
             target.parent.mkdir(parents=True, exist_ok=True)
             print(f'copy {source} to {target}')
             target.write_bytes(source.read_bytes())
+
+    def build(self):
+        self.mount()
+
+        def one_build():
+            for node_key in self.graph.nodes:
+                node = self.graph.nodes[node_key]['node']
+                if node.is_source:
+                    continue
+                if (self.builddir / node.path).exists():
+                    continue
+                edges = self.graph.in_edges(node_key)
+                sources = [self.graph.nodes[key]['node'] for (key, _) in edges]
+                exist = {(self.builddir / source.path).exists() for source in sources}
+                if exist == {True}:
+                    sources = [self.builddir / self.graph.nodes[node_key]
+                               ['node'].path for (node_key, _) in edges]
+                    targets = [self.builddir / self.graph.nodes[node_key]
+                               ['node'].path for (_, node_key) in edges]
+
+                    for (a, b) in edges:
+                        rule = self.graph.get_edge_data(a, b).get('rule', None)
+                    print(sources)
+                    print(targets)
+                    print(rule)
+                    rule(sources=sources, targets=targets).run()
+
+        one_build()

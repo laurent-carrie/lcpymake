@@ -17,7 +17,7 @@ def compile_rule(sources: List[Path], targets: List[Path]) -> base.Rule:
     source = sources[0]
     assert len(targets) == 1
     target = targets[0]
-    command = f'gcc -o {str(target)} -c {str(source)}'
+    command = ['gcc', '-o', str(target), '-c', str(source)]
 
     def run():
         p: subprocess.CompletedProcess = subprocess.run(command)
@@ -25,7 +25,7 @@ def compile_rule(sources: List[Path], targets: List[Path]) -> base.Rule:
             print(f'command {p.args}, returned {p.returncode}')
         return p.returncode == 0
 
-    return base.Rule(info=command, run=run)
+    return base.Rule(info=' '.join(command), run=run)
 
 
 def link_rule(sources, targets):

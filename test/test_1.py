@@ -26,7 +26,7 @@ def rule_1(sources, targets):
 class Test_1:
 
     def test_1(self, datadir):
-        g = base.Graph(sourcedir=(datadir), builddir=None)
+        g = base.Graph(sourcedir=(datadir), builddir=datadir / 'tmp')
         g.add_source_node('hello.cpp')
         g.add_source_node('titi.cpp')
         g.add_built_node('hello.o')
@@ -52,3 +52,4 @@ class Test_1:
                                 targets=['hello'], rule=rule_1)
 
         g.print()
+        g.build()
