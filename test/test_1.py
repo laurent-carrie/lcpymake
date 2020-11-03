@@ -43,6 +43,23 @@ def link_rule(sources, targets):
     return base.Rule(info=' '.join(command), run=run)
 
 
+def copy_rule(sources, targets):
+    assert len(sources) == 1
+    assert len(targets) == 1
+    source: Path = sources[0]
+    target: Path = targets[0]
+    command = f'copy {str(source)} to {str(target)}'
+
+    def run():
+        try:
+            target.write_bytes(source.read_bytes())
+            return True
+        except Exception:
+            return False
+
+    return base.Rule(info=command, run=run)
+
+
 def ok_graph(g):
     g.add_source_node('foo.cpp')
     g.add_source_node('bar.cpp')
@@ -252,9 +269,18 @@ class Test_1:
                                            'status': 'BUILT_PRESENT'}}
 
     def test_build_unconnected(self, datadir):
+        datadir = Path(datadir)
         g = base.Graph(sourcedir=(datadir), builddir=datadir / 'tmp')
         ok_graph(g)
         g.remove_node('hello')
+        g.remove_node('foo.cpp')
+
+        (datadir / 'foo.moved.cpp').write_bytes((datadir / 'foo.cpp').read_bytes())
+        (datadir / 'foo.cpp').unlink()
+        g.add_source_node('foo.moved.cpp')
+        g.add_built_node('foo.cpp')
+        g.add_explicit_rule(sources=['foo.moved.cpp'], targets=[
+                            'foo.cpp'], rule=copy_rule)
         assert g.to_json() == {'bar.cpp': {'is_source': True,
                                            'path': 'bar.cpp',
                                            'preds': [],
@@ -265,14 +291,19 @@ class Test_1:
                                          'preds': ['bar.cpp'],
                                          'rule': 'g++ -o bar.o -c bar.cpp',
                                          'status': 'BUILT_MISSING'},
-                               'foo.cpp': {'is_source': True,
+                               'foo.cpp': {'is_source': False,
                                            'path': 'foo.cpp',
-                                           'preds': [],
-                                           'rule': None,
-                                           'status': 'SOURCE_PRESENT'},
+                                           'preds': ['foo.moved.cpp'],
+                                           'rule': 'copy foo.moved.cpp to foo.cpp',
+                                           'status': 'BUILT_MISSING'},
+                               'foo.moved.cpp': {'is_source': True,
+                                                 'path': 'foo.moved.cpp',
+                                                 'preds': [],
+                                                 'rule': None,
+                                                 'status': 'SOURCE_PRESENT'},
                                'foo.o': {'is_source': False,
                                          'path': 'foo.o',
-                                         'preds': ['foo.cpp'],
+                                         'preds': [],
                                          'rule': 'g++ -o foo.o -c foo.cpp',
                                          'status': 'BUILT_MISSING'},
                                'hello.cpp': {'is_source': True,
@@ -285,7 +316,6 @@ class Test_1:
                                            'preds': ['hello.cpp'],
                                            'rule': 'g++ -o hello.o -c hello.cpp',
                                            'status': 'BUILT_MISSING'}}
-
         g.build()
         assert g.to_json() == {'bar.cpp': {'is_source': True,
                                            'path': 'bar.cpp',
@@ -297,14 +327,19 @@ class Test_1:
                                          'preds': ['bar.cpp'],
                                          'rule': 'g++ -o bar.o -c bar.cpp',
                                          'status': 'BUILT_PRESENT'},
-                               'foo.cpp': {'is_source': True,
+                               'foo.cpp': {'is_source': False,
                                            'path': 'foo.cpp',
-                                           'preds': [],
-                                           'rule': None,
-                                           'status': 'SOURCE_PRESENT'},
+                                           'preds': ['foo.moved.cpp'],
+                                           'rule': 'copy foo.moved.cpp to foo.cpp',
+                                           'status': 'BUILT_PRESENT'},
+                               'foo.moved.cpp': {'is_source': True,
+                                                 'path': 'foo.moved.cpp',
+                                                 'preds': [],
+                                                 'rule': None,
+                                                 'status': 'SOURCE_PRESENT'},
                                'foo.o': {'is_source': False,
                                          'path': 'foo.o',
-                                         'preds': ['foo.cpp'],
+                                         'preds': [],
                                          'rule': 'g++ -o foo.o -c foo.cpp',
                                          'status': 'BUILT_PRESENT'},
                                'hello.cpp': {'is_source': True,

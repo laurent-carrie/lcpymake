@@ -250,28 +250,54 @@ class Graph:
         self.mount()
         self.builddir.mkdir(parents=True, exist_ok=True)
 
-        def one_build():
+        def look_for_candidate():
+            """
+            a candidate for build is a node that is not built and whose none of its predecessors are not not_built
+            """
             for node_key in self.graph.nodes:
-                node = self.graph.nodes[node_key]['node']
-                if node.is_source:
+                gnode = self.graph.nodes[node_key]
+                node = gnode['node']
+                if self.node_status(node) in {NodeStatus.SOURCE_MISSING, NodeStatus.SOURCE_PRESENT, NodeStatus.BUILT_PRESENT}:
                     continue
-                if (self.builddir / node.path).exists():
-                    continue
-                edges = self.graph.in_edges(node_key)
+                edges = self.graph.in_edges(gnode)
                 sources = [self.graph.nodes[key]['node'] for (key, _) in edges]
-                exist = {(self.builddir / source.path).exists() for source in sources}
-                if exist == {True}:
-                    sources = [self.builddir / self.graph.nodes[node_key]
-                               ['node'].path for (node_key, _) in edges]
-                    targets = list({self.builddir / self.graph.nodes[node_key]
-                                    ['node'].path for (_, node_key) in edges})
+                sources_status = {self.node_status(source) for source in sources}
+                if NodeStatus.SOURCE_MISSING in sources_status:
+                    continue
+                if NodeStatus.BUILT_MISSING in sources_status:
+                    continue
 
-                    for (a, b) in edges:
-                        rule = self.graph.get_edge_data(a, b).get('rule', None)
-                    print(sources)
-                    print(targets)
-                    print(rule)
-                    result_ok = rule(sources=sources, targets=targets).run()
-                    logging.info(f'result ok : {result_ok}')
+                return node_key
+            else:
+                return None
+
+        def one_build():
+            before = self.to_json()
+            candidate_key = look_for_candidate()
+            if candidate_key is None:
+                return
+            # node = self.graph.nodes[candidate_key]['node']
+            edges = self.graph.in_edges(candidate_key)
+            sources = [self.graph.nodes[key]['node'] for (key, _) in edges]
+            exist = {(self.builddir / source.path).exists() for source in sources}
+            if exist == {True}:
+                source_nodes: List[Node] = [self.graph.nodes[node_key]['node']
+                                            for (node_key, _) in edges]
+                target_nodes: List[Node] = [self.graph.nodes[node_key]['node']
+                                            for (_, node_key) in edges]
+                sources: List[Path] = [self.builddir / s.path for s in source_nodes]
+                targets: List[Path] = list(
+                    {self.builddir / t.path for t in target_nodes})
+
+                for (a, b) in edges:
+                    rule = self.graph.get_edge_data(a, b).get('rule', None)
+
+                result_ok = rule(sources=sources, targets=targets).run()
+                print(result_ok)
+
+            after = self.to_json()
+            if before == after:
+                raise Exception('internal error, build did not progress')
+            one_build()
 
         one_build()
