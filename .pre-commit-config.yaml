@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0  # Use the ref you want to point at
+    rev: v3.3.0  # Use the ref you want to point at
     hooks:
     -   id: trailing-whitespace
     -   id: check-ast
@@ -15,12 +15,19 @@ repos:
     -   id: trailing-whitespace
 
 -   repo: https://github.com/pre-commit/mirrors-autopep8
-    rev: ''  # Use the sha / tag you want to point at
+    rev: 'v1.5.4'  # Use the sha / tag you want to point at
     hooks:
     -   id: autopep8
 
 
 -   repo: https://gitlab.com/pycqa/flake8
-    rev: ''  # Use the sha / tag you want to point at
+    rev: '3.8.4'  # Use the sha / tag you want to point at
     hooks:
     - id: flake8
+
+-   repo: https://github.com/pre-commit/mirrors-pylint
+    rev: 'v2.6.0'
+    hooks:
+    -   id: pylint
+        args:
+        - --rcfile=.pylintrc

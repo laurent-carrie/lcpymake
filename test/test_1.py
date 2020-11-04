@@ -1,4 +1,4 @@
-from lcpymake import base
+from lcpymake import api
 from pathlib import Path
 import pytest
 from typing import List
@@ -6,349 +6,44 @@ import subprocess
 import string
 
 
-def rule_1(sources, targets) -> base.Rule:
-    def run():
-        pass
-
-    return base.Rule(info='blah blah', run=run)
-
-
-def compile_rule(sources: List[Path], targets: List[Path]) -> base.Rule:
-    assert len(sources) == 1
-    source = sources[0]
-    assert len(targets) == 1
-    target = targets[0]
-    command = ['g++', '-o', str(target), '-c', str(source)]
-
-    def run():
-        p: subprocess.CompletedProcess = subprocess.run(command)
-        if p.returncode != 0:
-            print(f'command {p.args}, returned {p.returncode}')
-        return p.returncode == 0
-
-    return base.Rule(info=' '.join(command), run=run)
-
-
-def link_rule(sources, targets):
-    assert len(targets) == 1
-    target = targets[0]
-    command = ['g++', '-o', str(target)] + [str(s) for s in sources]
-
-    def run():
-        p: subprocess.CompletedProcess = subprocess.run(command)
-        if p.returncode != 0:
-            print(f'command {p.args}, returned {p.returncode}')
-        return p.returncode == 0
-
-    return base.Rule(info=' '.join(command), run=run)
-
-
-def copy_rule(sources, targets):
-    assert len(sources) == 1
-    assert len(targets) == 1
-    source: Path = sources[0]
-    target: Path = targets[0]
-    command = f'copy {str(source)} to {str(target)}'
-
-    def run():
-        try:
-            target.write_bytes(source.read_bytes())
-            return True
-        except Exception:
-            return False
-
-    return base.Rule(info=command, run=run)
-
-
-def ok_graph(g):
-    g.add_source_node('foo.cpp')
-    g.add_source_node('bar.cpp')
-    g.add_source_node('hello.cpp')
-    g.add_built_node('foo.o')
-    g.add_built_node('bar.o')
-    g.add_built_node('hello.o')
-    g.add_built_node('hello')
-
-    g.add_explicit_rule(sources=['foo.cpp'],
-                        targets=['foo.o'], rule=compile_rule)
-    g.add_explicit_rule(sources=['bar.cpp'],
-                        targets=['bar.o'], rule=compile_rule)
-    g.add_explicit_rule(sources=['hello.cpp'],
-                        targets=['hello.o'], rule=compile_rule)
-
-    g.add_explicit_rule(sources=['foo.o', 'bar.o', 'hello.o'],
-                        targets=['hello'], rule=link_rule)
-
-    assert g.to_json() == {'bar.cpp': {'is_source': True,
-                                       'path': 'bar.cpp',
-                                       'preds': [],
-                                       'rule': None,
-                                       'status': 'SOURCE_PRESENT'},
-                           'bar.o': {'is_source': False,
-                                     'path': 'bar.o',
-                                     'preds': ['bar.cpp'],
-                                     'rule': 'g++ -o bar.o -c bar.cpp',
-                                     'status': 'BUILT_MISSING'},
-                           'foo.cpp': {'is_source': True,
-                                       'path': 'foo.cpp',
-                                       'preds': [],
-                                       'rule': None,
-                                       'status': 'SOURCE_PRESENT'},
-                           'foo.o': {'is_source': False,
-                                     'path': 'foo.o',
-                                     'preds': ['foo.cpp'],
-                                     'rule': 'g++ -o foo.o -c foo.cpp',
-                                     'status': 'BUILT_MISSING'},
-                           'hello': {'is_source': False,
-                                     'path': 'hello',
-                                     'preds': ['foo.o', 'bar.o', 'hello.o'],
-                                     'rule': 'g++ -o hello foo.o bar.o hello.o',
-                                     'status': 'BUILT_MISSING'},
-                           'hello.cpp': {'is_source': True,
-                                         'path': 'hello.cpp',
-                                         'preds': [],
-                                         'rule': None,
-                                         'status': 'SOURCE_PRESENT'},
-                           'hello.o': {'is_source': False,
-                                       'path': 'hello.o',
-                                       'preds': ['hello.cpp'],
-                                       'rule': 'g++ -o hello.o -c hello.cpp',
-                                       'status': 'BUILT_MISSING'}}
+def dummy_rule(sources, target):
+    pass
 
 
 class Test_1:
 
     def test_graph(self, datadir):
-        g = base.Graph(sourcedir=(datadir), sandbox=datadir / 'tmp')
-        g.add_source_node('hello.cpp')
-        g.add_source_node('titi.cpp')
-        g.add_built_node('hello.o')
-        g.add_built_node('titi.o')
-        g.add_built_node('hello')
+        g = api.create()
+        api.create_source_node(g, 'foo.cpp')
+        api.create_source_node(g, 'bar.cpp')
+        api.create_source_node(g, 'main.cpp')
+        api.create_built_node(g, artefacts=['foo.o'], sources=[
+                              'foo.cpp'], rule=dummy_rule)
+        api.create_built_node(g, artefacts=['bar.o'], sources=[
+                              'bar.cpp'], rule=dummy_rule)
+        api.create_built_node(g, artefacts=['main.o'], sources=[
+                              'main.cpp'], rule=dummy_rule)
+        api.create_built_node(g, artefacts=['hello'], sources=[
+                              'main.o', 'bar.o', 'foo.o'], rule=dummy_rule)
 
-        j1 = {'hello': {'is_source': False,
-                        'path': 'hello',
-                        'preds': [],
-                        'rule': None,
-                        'status': 'BUILT_MISSING'},
-              'hello.cpp': {'is_source': True,
-                            'path': 'hello.cpp',
-                            'preds': [],
-                            'rule': None,
-                            'status': 'SOURCE_PRESENT'},
-              'hello.o': {'is_source': False,
-                          'path': 'hello.o',
-                          'preds': [],
-                          'rule': None,
-                          'status': 'BUILT_MISSING'},
-              'titi.cpp': {'is_source': True,
-                           'path': 'titi.cpp',
-                           'preds': [],
-                           'rule': None,
-                           'status': 'SOURCE_PRESENT'},
-              'titi.o': {'is_source': False,
-                         'path': 'titi.o',
-                         'preds': [],
-                         'rule': None,
-                         'status': 'BUILT_MISSING'}}
-        assert g.to_json() == j1
+        j1 = {'0': {'artefacts': ['foo.cpp'], 'id': 0},
+              '1': {'artefacts': ['bar.cpp'], 'id': 1},
+              '2': {'artefacts': ['main.cpp'], 'id': 2},
+              '3': {'artefacts': ['foo.o'], 'id': 3},
+              '4': {'artefacts': ['bar.o'], 'id': 4},
+              '5': {'artefacts': ['main.o'], 'id': 5},
+              '6': {'artefacts': ['hello'], 'id': 6}}
+        assert api.to_json(g) == j1
 
-        with pytest.raises(base.NodeAlreadyThere):
-            g.add_source_node('hello.cpp')
-        assert g.to_json() == j1
+        with pytest.raises(api.ArtefactSeenSeveralTimes):
+            api.create_source_node(g, 'main.cpp')
+        assert api.to_json(g) == j1
 
-        with pytest.raises(base.CannotAddARuleForASourceNode):
-            g.add_explicit_rule(sources=['hello.o'], targets=['hello.cpp'], rule=rule_1)
-        assert g.to_json() == j1
-
-        g.add_explicit_rule(sources=['hello.o', 'titi.o'],
-                            targets=['hello'], rule=rule_1)
-        j2 = {'hello': {'is_source': False,
-                        'path': 'hello',
-                        'preds': ['hello.o', 'titi.o'],
-                        'rule': 'blah blah',
-                        'status': 'BUILT_MISSING'},
-              'hello.cpp': {'is_source': True,
-                            'path': 'hello.cpp',
-                            'preds': [],
-                            'rule': None,
-                            'status': 'SOURCE_PRESENT'},
-              'hello.o': {'is_source': False,
-                          'path': 'hello.o',
-                          'preds': [],
-                          'rule': None,
-                          'status': 'BUILT_MISSING'},
-              'titi.cpp': {'is_source': True,
-                           'path': 'titi.cpp',
-                           'preds': [],
-                           'rule': None,
-                           'status': 'SOURCE_PRESENT'},
-              'titi.o': {'is_source': False,
-                         'path': 'titi.o',
-                         'preds': [],
-                         'rule': None,
-                         'status': 'BUILT_MISSING'}}
-        assert g.to_json() == j2
-
-        with pytest.raises(base.CannotAddEdgeItWouldMakeALoop):
-            g.add_explicit_rule(sources=['hello'], targets=['hello.o'], rule=rule_1)
-
-        assert g.to_json() == j2
-        g.add_explicit_rule(sources=['hello.cpp'], targets=['hello.o'], rule=rule_1)
-        g.add_explicit_rule(sources=['titi.cpp'], targets=['titi.o'], rule=rule_1)
-
-        j3 = {'hello': {'is_source': False,
-                        'path': 'hello',
-                        'preds': ['hello.o', 'titi.o'],
-                        'rule': 'blah blah',
-                        'status': 'BUILT_MISSING'},
-              'hello.cpp': {'is_source': True,
-                            'path': 'hello.cpp',
-                            'preds': [],
-                            'rule': None,
-                            'status': 'SOURCE_PRESENT'},
-              'hello.o': {'is_source': False,
-                          'path': 'hello.o',
-                          'preds': ['hello.cpp'],
-                          'rule': 'blah blah',
-                          'status': 'BUILT_MISSING'},
-              'titi.cpp': {'is_source': True,
-                           'path': 'titi.cpp',
-                           'preds': [],
-                           'rule': None,
-                           'status': 'SOURCE_PRESENT'},
-              'titi.o': {'is_source': False,
-                         'path': 'titi.o',
-                         'preds': ['titi.cpp'],
-                         'rule': 'blah blah',
-                         'status': 'BUILT_MISSING'}}
-        assert g.to_json() == j3
-
-        with pytest.raises(base.NodeAlreadyHasARule):
-            g.add_explicit_rule(sources=['hello.o', 'titi.o'],
-                                targets=['hello'], rule=rule_1)
-
-    def test_build(self, datadir):
-        g = base.Graph(sourcedir=(datadir), sandbox=datadir / 'tmp')
-        ok_graph(g)
-        g.build()
-        assert g.to_json() == {'bar.cpp': {'is_source': True,
-                                           'path': 'bar.cpp',
-                                           'preds': [],
-                                           'rule': None,
-                                           'status': 'SOURCE_PRESENT'},
-                               'bar.o': {'is_source': False,
-                                         'path': 'bar.o',
-                                         'preds': ['bar.cpp'],
-                                         'rule': 'g++ -o bar.o -c bar.cpp',
-                                         'status': 'BUILT_PRESENT'},
-                               'foo.cpp': {'is_source': True,
-                                           'path': 'foo.cpp',
-                                           'preds': [],
-                                           'rule': None,
-                                           'status': 'SOURCE_PRESENT'},
-                               'foo.o': {'is_source': False,
-                                         'path': 'foo.o',
-                                         'preds': ['foo.cpp'],
-                                         'rule': 'g++ -o foo.o -c foo.cpp',
-                                         'status': 'BUILT_PRESENT'},
-                               'hello': {'is_source': False,
-                                         'path': 'hello',
-                                         'preds': ['foo.o', 'bar.o', 'hello.o'],
-                                         'rule': 'g++ -o hello foo.o bar.o hello.o',
-                                         'status': 'BUILT_PRESENT'},
-                               'hello.cpp': {'is_source': True,
-                                             'path': 'hello.cpp',
-                                             'preds': [],
-                                             'rule': None,
-                                             'status': 'SOURCE_PRESENT'},
-                               'hello.o': {'is_source': False,
-                                           'path': 'hello.o',
-                                           'preds': ['hello.cpp'],
-                                           'rule': 'g++ -o hello.o -c hello.cpp',
-                                           'status': 'BUILT_PRESENT'}}
-
-    def test_build_unconnected(self, datadir):
-        datadir = Path(datadir)
-        g = base.Graph(sourcedir=(datadir), sandbox=datadir / 'tmp')
-        ok_graph(g)
-        g.remove_node('hello')
-        g.remove_node('foo.cpp')
-
-        (datadir / 'foo.moved.cpp').write_bytes((datadir / 'foo.cpp').read_bytes())
-        (datadir / 'foo.cpp').unlink()
-        g.add_source_node('foo.moved.cpp')
-        g.add_built_node('foo.cpp')
-        g.add_explicit_rule(sources=['foo.moved.cpp'], targets=[
-                            'foo.cpp'], rule=copy_rule)
-        assert g.to_json() == {'bar.cpp': {'is_source': True,
-                                           'path': 'bar.cpp',
-                                           'preds': [],
-                                           'rule': None,
-                                           'status': 'SOURCE_PRESENT'},
-                               'bar.o': {'is_source': False,
-                                         'path': 'bar.o',
-                                         'preds': ['bar.cpp'],
-                                         'rule': 'g++ -o bar.o -c bar.cpp',
-                                         'status': 'BUILT_MISSING'},
-                               'foo.cpp': {'is_source': False,
-                                           'path': 'foo.cpp',
-                                           'preds': ['foo.moved.cpp'],
-                                           'rule': 'copy foo.moved.cpp to foo.cpp',
-                                           'status': 'BUILT_MISSING'},
-                               'foo.moved.cpp': {'is_source': True,
-                                                 'path': 'foo.moved.cpp',
-                                                 'preds': [],
-                                                 'rule': None,
-                                                 'status': 'SOURCE_PRESENT'},
-                               'foo.o': {'is_source': False,
-                                         'path': 'foo.o',
-                                         'preds': [],
-                                         'rule': 'g++ -o foo.o -c foo.cpp',
-                                         'status': 'BUILT_MISSING'},
-                               'hello.cpp': {'is_source': True,
-                                             'path': 'hello.cpp',
-                                             'preds': [],
-                                             'rule': None,
-                                             'status': 'SOURCE_PRESENT'},
-                               'hello.o': {'is_source': False,
-                                           'path': 'hello.o',
-                                           'preds': ['hello.cpp'],
-                                           'rule': 'g++ -o hello.o -c hello.cpp',
-                                           'status': 'BUILT_MISSING'}}
-        g.build()
-        assert g.to_json() == {'bar.cpp': {'is_source': True,
-                                           'path': 'bar.cpp',
-                                           'preds': [],
-                                           'rule': None,
-                                           'status': 'SOURCE_PRESENT'},
-                               'bar.o': {'is_source': False,
-                                         'path': 'bar.o',
-                                         'preds': ['bar.cpp'],
-                                         'rule': 'g++ -o bar.o -c bar.cpp',
-                                         'status': 'BUILT_PRESENT'},
-                               'foo.cpp': {'is_source': False,
-                                           'path': 'foo.cpp',
-                                           'preds': ['foo.moved.cpp'],
-                                           'rule': 'copy foo.moved.cpp to foo.cpp',
-                                           'status': 'BUILT_PRESENT'},
-                               'foo.moved.cpp': {'is_source': True,
-                                                 'path': 'foo.moved.cpp',
-                                                 'preds': [],
-                                                 'rule': None,
-                                                 'status': 'SOURCE_PRESENT'},
-                               'foo.o': {'is_source': False,
-                                         'path': 'foo.o',
-                                         'preds': [],
-                                         'rule': 'g++ -o foo.o -c foo.cpp',
-                                         'status': 'BUILT_PRESENT'},
-                               'hello.cpp': {'is_source': True,
-                                             'path': 'hello.cpp',
-                                             'preds': [],
-                                             'rule': None,
-                                             'status': 'SOURCE_PRESENT'},
-                               'hello.o': {'is_source': False,
-                                           'path': 'hello.o',
-                                           'preds': ['hello.cpp'],
-                                           'rule': 'g++ -o hello.o -c hello.cpp',
-                                           'status': 'BUILT_PRESENT'}}
+        j2 = {'0': {'artefacts': ['foo.cpp'], 'id': 0},
+              '1': {'artefacts': ['bar.cpp'], 'id': 1},
+              '2': {'artefacts': ['main.cpp'], 'id': 2},
+              '3': {'artefacts': ['foo.o'], 'id': 3},
+              '4': {'artefacts': ['bar.o'], 'id': 4},
+              '5': {'artefacts': ['main.o'], 'id': 5},
+              '6': {'artefacts': ['hello'], 'id': 6}}
+        assert api.to_json(g) == j2
