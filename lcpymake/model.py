@@ -48,7 +48,9 @@ class Node:
     sources: List[Tuple[str, 'Path']]
     rule: str
 
-    def __init__(self, artefacts, sources, rule):
+    def __init__(self, srcdir, sandbox, artefacts, sources, rule):
+        self.srcdir = srcdir
+        self.sandbox = sandbox
         self.artefacts = artefacts
         if sources is None:
             self.sources = []
@@ -76,25 +78,29 @@ class Node:
 
     def to_json(self):
         world = {'artefacts': [str(p) for (_, p) in self.artefacts]}
+        world.update({'status': self.status.name})
         if not self.is_source():
             world.update({'sources': [str(p) for (_, p) in self.sources]})
             world.update({'rule': self.rule_info})
         return world
 
+    @property
     def status(self):
         if self.is_source():
-            if {Path(s).exists() for (_, s) in self.artefacts} == {True}:
+            if {(self.srcdir / s).exists() for (_, s) in self.artefacts} == {True}:
                 return NodeStatus.SOURCE_PRESENT
             return NodeStatus.SOURCE_MISSING
-        if {Path(s).exists() for (_, s) in self.artefacts} == {True}:
+        if {(self.sandbox / s).exists() for (_, s) in self.artefacts} == {True}:
             return NodeStatus.BUILT_PRESENT
         return NodeStatus.BUILT_MISSING
 
 
 class World:
 
-    def __init__(self):
+    def __init__(self, srcdir: Path, sandbox: Path):
         self.nodes: List[Node] = []
+        self.srcdir = srcdir
+        self.sandbox = sandbox
 
     def _find_node(self, filename) -> Node:
         # pylint:disable=W0120
@@ -115,8 +121,8 @@ class World:
         return j
 
     def _add_source_node(self, artefact: str):
-        new_node = Node(artefacts=[
-            ('', artefact)], sources=[], rule=None)
+        new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
+                        artefacts=[('', artefact)], sources=[], rule=None)
         try:
             self.nodes.append(new_node)
             self._is_valid()
@@ -127,7 +133,8 @@ class World:
     def _add_built_node(self, sources: List[str], artefacts: List[str], rule):
         artefacts = [('', f) for f in artefacts]
         sources = [('', f) for f in sources]
-        new_node = Node(artefacts=artefacts, sources=sources, rule=rule)
+        new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
+                        artefacts=artefacts, sources=sources, rule=rule)
         try:
             self.nodes.append(new_node)
             self._is_valid()
@@ -166,14 +173,15 @@ class World:
 
     def _print(self):
         def print_tree(indent, node):
-            if node.status() == NodeStatus.SOURCE_PRESENT:
+            status = node.status
+            if status == NodeStatus.SOURCE_PRESENT:
                 # text = colored(node, 'red', attrs=['reverse', 'blink'])
                 line1 = colored(node.label, 'green', attrs=[]) + ' (source)'
-            elif node.status() == NodeStatus.SOURCE_MISSING:
+            elif status == NodeStatus.SOURCE_MISSING:
                 line1 = colored(node.label, 'red', attrs=['blink']) + ' (missing source)'
-            elif node.status() == NodeStatus.BUILT_PRESENT:
+            elif status == NodeStatus.BUILT_PRESENT:
                 line1 = colored(node.label, 'blue', attrs=[]) + ' (built present)'
-            elif node.status() == NodeStatus.BUILT_MISSING:
+            elif status == NodeStatus.BUILT_MISSING:
                 line1 = colored(node.label, 'blue', attrs=[
                                 'reverse']) + ' (built missing)'
             else:

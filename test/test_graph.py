@@ -21,7 +21,7 @@ dummy_rule = api.Rule(info, run)
 class Test_graph:
 
     def test_graph(self, datadir):
-        g = api.create()
+        g = api.create(srcdir=Path(datadir) / 'src', sandbox=Path(datadir) / 'sandbox')
         api.create_source_node(g, 'foo.cpp')
         api.create_source_node(g, 'bar.cpp')
         api.create_source_node(g, 'main.cpp')
@@ -34,21 +34,25 @@ class Test_graph:
         api.create_built_node(g, artefacts=['hello'], sources=[
             'main.o', 'bar.o', 'foo.o'], rule=dummy_rule)
 
-        j1 = [{'artefacts': ['foo.cpp']},
-              {'artefacts': ['bar.cpp']},
-              {'artefacts': ['main.cpp']},
+        j1 = [{'artefacts': ['foo.cpp'], 'status': 'SOURCE_MISSING'},
+              {'artefacts': ['bar.cpp'], 'status': 'SOURCE_PRESENT'},
+              {'artefacts': ['main.cpp'], 'status': 'SOURCE_MISSING'},
               {'artefacts': ['foo.o'],
                'rule': "build target ['foo.o'] from sources ['foo.cpp']",
-               'sources': ['foo.cpp']},
+               'sources': ['foo.cpp'],
+               'status': 'BUILT_PRESENT'},
               {'artefacts': ['bar.o'],
                'rule': "build target ['bar.o'] from sources ['bar.cpp']",
-               'sources': ['bar.cpp']},
+               'sources': ['bar.cpp'],
+               'status': 'BUILT_MISSING'},
               {'artefacts': ['main.o'],
                'rule': "build target ['main.o'] from sources ['main.cpp']",
-               'sources': ['main.cpp']},
+               'sources': ['main.cpp'],
+               'status': 'BUILT_MISSING'},
               {'artefacts': ['hello'],
                'rule': "build target ['hello'] from sources ['main.o', 'bar.o', 'foo.o']",
-               'sources': ['main.o', 'bar.o', 'foo.o']}]
+               'sources': ['main.o', 'bar.o', 'foo.o'],
+               'status': 'BUILT_MISSING'}]
         assert api.to_json(g) == j1
 
         with pytest.raises(api.ArtefactSeenSeveralTimes):

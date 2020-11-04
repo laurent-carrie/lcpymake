@@ -1,4 +1,5 @@
 from typing import List
+from pathlib import Path
 
 from lcpymake.model import World
 # pylint:disable=W0611
@@ -12,8 +13,8 @@ from lcpymake.model import Rule
 # pylint:disable=W0212
 
 
-def create():
-    return World()
+def create(srcdir: Path, sandbox: Path):
+    return World(srcdir=srcdir, sandbox=sandbox)
 
 
 def create_source_node(world: World, artefact: str):
