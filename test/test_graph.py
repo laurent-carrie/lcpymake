@@ -59,3 +59,6 @@ class Test_graph:
             api.create_built_node(g, artefacts=['blah'], sources=[
                 'missing.cpp'], rule=dummy_rule)
         assert api.to_json(g) == j1
+        print()
+        print()
+        api.gprint(g)

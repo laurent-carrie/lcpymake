@@ -34,3 +34,7 @@ def add_explicit_rule(world, sources, target, rule):
 
 def is_valid(world):
     return world._is_valid()
+
+
+def gprint(world):
+    world._print()
