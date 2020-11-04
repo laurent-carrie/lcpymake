@@ -1,7 +1,7 @@
 import json
 from enum import Enum
 from pathlib import Path
-from typing import List, Tuple, Set
+from typing import List, Tuple, Set, Callable
 import collections
 # pylint:disable=E0401
 # don't know why pylint complains about termcolor
@@ -30,7 +30,8 @@ class NodeAlreadyHasARule(Exception):
 
 
 class Rule:
-    def __init__(self, info, run):
+    def __init__(self, info: Callable[[List[str], List[str]], str],
+                 run: Callable[[List[str], List[str]], bool]):
         self.info = info
         self.run = run
 
