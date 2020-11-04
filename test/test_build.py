@@ -84,3 +84,7 @@ class TestBuild:
         print()
         api.gprint(g)
         assert api.build(g)
+        assert (Path(datadir) / 'sandbox/foo.o').exists()
+        assert (Path(datadir) / 'sandbox/bar.o').exists()
+        assert (Path(datadir) / 'sandbox/main.o').exists()
+        assert (Path(datadir) / 'sandbox/hello').exists()
