@@ -6,8 +6,16 @@ import subprocess
 import string
 
 
-def dummy_rule(sources, target):
+def info(sources, targets):
+    info = f'build target {targets} from sources {[sources]}'
+    return info
+
+
+def run(sources, targets):
     pass
+
+
+dummy_rule = api.Rule(info, run)
 
 
 class Test_1:
@@ -18,32 +26,31 @@ class Test_1:
         api.create_source_node(g, 'bar.cpp')
         api.create_source_node(g, 'main.cpp')
         api.create_built_node(g, artefacts=['foo.o'], sources=[
-                              'foo.cpp'], rule=dummy_rule)
+            'foo.cpp'], rule=dummy_rule)
         api.create_built_node(g, artefacts=['bar.o'], sources=[
-                              'bar.cpp'], rule=dummy_rule)
+            'bar.cpp'], rule=dummy_rule)
         api.create_built_node(g, artefacts=['main.o'], sources=[
-                              'main.cpp'], rule=dummy_rule)
+            'main.cpp'], rule=dummy_rule)
         api.create_built_node(g, artefacts=['hello'], sources=[
-                              'main.o', 'bar.o', 'foo.o'], rule=dummy_rule)
+            'main.o', 'bar.o', 'foo.o'], rule=dummy_rule)
 
-        j1 = {'0': {'artefacts': ['foo.cpp'], 'id': 0},
-              '1': {'artefacts': ['bar.cpp'], 'id': 1},
-              '2': {'artefacts': ['main.cpp'], 'id': 2},
-              '3': {'artefacts': ['foo.o'], 'id': 3},
-              '4': {'artefacts': ['bar.o'], 'id': 4},
-              '5': {'artefacts': ['main.o'], 'id': 5},
-              '6': {'artefacts': ['hello'], 'id': 6}}
+        j1 = [{'artefacts': ['foo.cpp']},
+              {'artefacts': ['bar.cpp']},
+              {'artefacts': ['main.cpp']},
+              {'artefacts': ['foo.o'],
+               'rule': "build target ['foo.o'] from sources [['foo.cpp']]",
+               'sources': ['foo.cpp']},
+              {'artefacts': ['bar.o'],
+               'rule': "build target ['bar.o'] from sources [['bar.cpp']]",
+               'sources': ['bar.cpp']},
+              {'artefacts': ['main.o'],
+               'rule': "build target ['main.o'] from sources [['main.cpp']]",
+               'sources': ['main.cpp']},
+              {'artefacts': ['hello'],
+               'rule': "build target ['hello'] from sources [['main.o', 'bar.o', 'foo.o']]",
+               'sources': ['main.o', 'bar.o', 'foo.o']}]
         assert api.to_json(g) == j1
 
         with pytest.raises(api.ArtefactSeenSeveralTimes):
             api.create_source_node(g, 'main.cpp')
         assert api.to_json(g) == j1
-
-        j2 = {'0': {'artefacts': ['foo.cpp'], 'id': 0},
-              '1': {'artefacts': ['bar.cpp'], 'id': 1},
-              '2': {'artefacts': ['main.cpp'], 'id': 2},
-              '3': {'artefacts': ['foo.o'], 'id': 3},
-              '4': {'artefacts': ['bar.o'], 'id': 4},
-              '5': {'artefacts': ['main.o'], 'id': 5},
-              '6': {'artefacts': ['hello'], 'id': 6}}
-        assert api.to_json(g) == j2
