@@ -49,9 +49,9 @@ class TestBuild:
 
     def test_build(self, datadir):
         g = api.create(srcdir=Path(datadir) / 'src', sandbox=Path(datadir) / 'sandbox')
-        api.create_source_node(g, 'foo.cpp')
-        api.create_source_node(g, 'bar.cpp')
-        api.create_source_node(g, 'main.cpp')
+        api.create_source_node(g, 'foo.cpp', scan=None)
+        api.create_source_node(g, 'bar.cpp', scan=None)
+        api.create_source_node(g, 'main.cpp', scan=None)
         api.create_built_node(g, artefacts=['foo.o'], sources=[
             'foo.cpp'], rule=cpp_compile)
         api.create_built_node(g, artefacts=['bar.o'], sources=[

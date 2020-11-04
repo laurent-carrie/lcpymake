@@ -51,9 +51,9 @@ def scan_cpp(f):
 # pylint:disable=R0201
 
 
-class TestBuild:
+class TestBuildWithScan:
 
-    def test_build(self, datadir):
+    def test_build_with_scan(self, datadir):
         g = api.create(srcdir=Path(datadir) / 'src', sandbox=Path(datadir) / 'sandbox')
         api.create_source_node(g, artefact='foo.cpp', scan=scan_cpp)
         api.create_source_node(g, artefact='bar.cpp', scan=scan_cpp)

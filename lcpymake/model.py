@@ -226,7 +226,7 @@ class World:
 
     def _mount(self):
         for node in self.nodes:
-            if not node.is_source():
+            if not node.is_source:
                 continue
             for (_, f) in node.artefacts:
                 if node.status != NodeStatus.SOURCE_PRESENT:
