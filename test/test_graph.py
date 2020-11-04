@@ -1,24 +1,26 @@
-from lcpymake import api
 from pathlib import Path
+# pylint:disable=E0401
 import pytest
-from typing import List
-import subprocess
-import string
+# pylint:enable=E0401
+from lcpymake import api
 
 
-def info(sources, targets):
+def info_dummy_rule(sources, targets):
     info = f'build target {targets} from sources {sources}'
     return info
 
 
-def run(sources, targets):
-    pass
+def run_dummy_rule(sources, targets):
+    print(sources)
+    print(targets)
 
 
-dummy_rule = api.Rule(info, run)
+dummy_rule = api.Rule(info_dummy_rule, run_dummy_rule)
+
+# pylint:disable=R0201
 
 
-class Test_graph:
+class TestGraph:
 
     def test_graph(self, datadir):
         g = api.create(srcdir=Path(datadir) / 'src', sandbox=Path(datadir) / 'sandbox')
