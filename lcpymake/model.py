@@ -29,6 +29,12 @@ class NodeAlreadyHasARule(Exception):
         Exception.__init__(self)
 
 
+class SourceFileMissing(Exception):
+    def __init__(self, filename):
+        Exception.__init__(self)
+        self.filename = filename
+
+
 class Rule:
     def __init__(self, info: Callable[[List[str], List[str]], str],
                  run: Callable[[List[str], List[str]], bool]):
@@ -68,6 +74,12 @@ class Node:
             not_qualified_artefacts = [s for (_, s) in self.artefacts]
             self.rule_info = rule.info(
                 sources=not_qualified_sources, targets=not_qualified_artefacts)
+
+    def run(self):
+        sources = [self.sandbox / f for (_, f) in self.sources]
+        artefacts = [self.sandbox / f for (_, f) in self.artefacts]
+        self.rule.run(sources=sources, targets=artefacts)
+        print(f'RRRRRRRRRRRRRRRRRRRRRRRRun {self.label}')
 
     @property
     def label(self):
@@ -194,3 +206,43 @@ class World:
 
         for node in self._leaf_nodes():
             print_tree(0, node)
+
+    def _mount(self):
+        for node in self.nodes:
+            if not node.is_source():
+                continue
+            for (_, f) in node.artefacts:
+                if node.status != NodeStatus.SOURCE_PRESENT:
+                    raise SourceFileMissing(f)
+                (self.sandbox / f).parent.mkdir(parents=True, exist_ok=True)
+                (self.sandbox / f).write_bytes((self.srcdir / f).read_bytes())
+
+    def _not_built(self):
+        return [node for node in self.nodes if node.status == NodeStatus.BUILT_MISSING]
+
+    def _node_can_be_built(self, node: Node):
+        if node.status != NodeStatus.BUILT_MISSING:
+            return False
+        for (_, source) in node.sources:
+            node_source = self._find_node(source)
+            if node_source.status in {NodeStatus.BUILT_MISSING, NodeStatus.SOURCE_MISSING}:
+                return False
+            if node_source.status in {NodeStatus.BUILT_PRESENT, NodeStatus.SOURCE_PRESENT}:
+                continue
+            raise Exception('implementation error')
+        return True
+
+    def _can_be_built(self) -> List[Node]:
+        return [node for node in self.nodes if self._node_can_be_built(node)]
+
+    def _build(self):
+        self._mount()
+        while True:
+            before = len(self._not_built())
+            for node in self._can_be_built():
+                node.run()
+            after = len(self._not_built())
+            if after == 0:
+                return True
+            if before == after:
+                return False

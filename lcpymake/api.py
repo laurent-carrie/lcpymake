@@ -39,3 +39,7 @@ def is_valid(world):
 
 def gprint(world):
     world._print()
+
+
+def build(world):
+    return world._build()
