@@ -17,8 +17,8 @@ def create(srcdir: Path, sandbox: Path):
     return World(srcdir=srcdir, sandbox=sandbox)
 
 
-def create_source_node(world: World, artefact: str):
-    world._add_source_node(artefact=artefact)
+def create_source_node(world: World, artefact: str, scan):
+    world._add_source_node(artefact=artefact, scan=scan)
 
 
 def create_built_node(world: World, artefacts: List[str], sources: List[str], rule: Rule):
@@ -29,16 +29,16 @@ def to_json(world: World):
     return world._to_json()
 
 
-def add_explicit_rule(world, sources, target, rule):
-    world._add_explicit_rule(sources=sources, target=target, rule=rule)
-
-
 def is_valid(world):
     return world._is_valid()
 
 
 def gprint(world):
     world._print()
+
+
+def scan_artefacts(world):
+    world._scan()
 
 
 def build(world):

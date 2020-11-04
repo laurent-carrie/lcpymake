@@ -47,6 +47,8 @@ class NodeStatus(Enum):
     SOURCE_MISSING = 2
     BUILT_PRESENT = 3
     BUILT_MISSING = 4
+    SCANNED_PRESENT_DEP = 5
+    SCANNED_MISSING_DEP = 6
 
 
 class Node:
@@ -55,10 +57,13 @@ class Node:
     sources: List[Tuple[str, 'Path']]
     rule: str
 
-    def __init__(self, srcdir, sandbox, artefacts, sources, rule):
+    def __init__(self, srcdir, sandbox, artefacts, sources, rule, scan):
         self.srcdir = srcdir
         self.sandbox = sandbox
         self.artefacts = artefacts
+        self.is_source = None
+        self.is_scanned = None
+        self.deps = []
         if sources is None:
             self.sources = []
         else:
@@ -74,35 +79,37 @@ class Node:
             not_qualified_artefacts = [s for (_, s) in self.artefacts]
             self.rule_info = rule.info(
                 sources=not_qualified_sources, targets=not_qualified_artefacts)
+        self.scan = scan
 
     def run(self):
         sources = [self.sandbox / f for (_, f) in self.sources]
         artefacts = [self.sandbox / f for (_, f) in self.artefacts]
         self.rule.run(sources=sources, targets=artefacts)
-        print(f'RRRRRRRRRRRRRRRRRRRRRRRRun {self.label}')
 
     @property
     def label(self):
         not_qualified_artefacts = [s for (_, s) in self.artefacts]
         return ';'.join(not_qualified_artefacts)
 
-    def is_source(self) -> bool:
-        return len(self.sources) == 0
-
     def to_json(self):
         world = {'artefacts': [str(p) for (_, p) in self.artefacts]}
         world.update({'status': self.status.name})
-        if not self.is_source():
+        if not self.is_source:
             world.update({'sources': [str(p) for (_, p) in self.sources]})
             world.update({'rule': self.rule_info})
         return world
 
     @property
     def status(self):
-        if self.is_source():
+
+        if self.is_scanned:
+            return NodeStatus.SCANNED_PRESENT_DEP
+
+        if self.is_source:
             if {(self.srcdir / s).exists() for (_, s) in self.artefacts} == {True}:
                 return NodeStatus.SOURCE_PRESENT
             return NodeStatus.SOURCE_MISSING
+
         if {(self.sandbox / s).exists() for (_, s) in self.artefacts} == {True}:
             return NodeStatus.BUILT_PRESENT
         return NodeStatus.BUILT_MISSING
@@ -133,12 +140,15 @@ class World:
         j = json.loads(world_dict_str)
         return j
 
-    def _add_source_node(self, artefact: str):
+    def _add_source_node(self, artefact: str, scan: Callable[[str], List[str]]):
         new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
-                        artefacts=[('', artefact)], sources=[], rule=None)
+                        artefacts=[('', artefact)], sources=[], rule=None, scan=scan)
+        new_node.is_scanned = False
+        new_node.is_source = True
         try:
             self.nodes.append(new_node)
             self._is_valid()
+            return new_node
         except Exception as exception:
             self.nodes.pop()
             raise exception
@@ -147,7 +157,9 @@ class World:
         artefacts = [('', f) for f in artefacts]
         sources = [('', f) for f in sources]
         new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
-                        artefacts=artefacts, sources=sources, rule=rule)
+                        artefacts=artefacts, sources=sources, rule=rule, scan=None)
+        new_node.is_scanned = False
+        new_node.is_source = False
         try:
             self.nodes.append(new_node)
             self._is_valid()
@@ -191,15 +203,20 @@ class World:
                 # text = colored(node, 'red', attrs=['reverse', 'blink'])
                 line1 = colored(node.label, 'green', attrs=[]) + ' (source)'
             elif status == NodeStatus.SOURCE_MISSING:
-                line1 = colored(node.label, 'red', attrs=['blink']) + ' (missing source)'
+                line1 = colored(node.label, 'red', attrs=[
+                                'reverse']) + ' (missing source)'
             elif status == NodeStatus.BUILT_PRESENT:
                 line1 = colored(node.label, 'blue', attrs=[]) + ' (built present)'
+            elif status == NodeStatus.SCANNED_PRESENT_DEP:
+                line1 = colored(node.label, 'cyan', attrs=[]) + ' (scanned present)'
             elif status == NodeStatus.BUILT_MISSING:
                 line1 = colored(node.label, 'blue', attrs=[
                                 'reverse']) + ' (built missing)'
             else:
                 raise Exception('internal error')
-            print(f"{'.'*indent}{line1}")
+            print(f"{'...'*indent}{line1}")
+            if not node.is_source:
+                print(f"{'...'*(indent+1)}rule : {node.rule_info}")
             for (_, source) in node.sources:
                 source_node = self._find_node(source)
                 print_tree(indent + 1, source_node)
@@ -246,3 +263,16 @@ class World:
                 return True
             if before == after:
                 return False
+
+    def _scan(self):
+        for node in self.nodes:
+            if node.status != NodeStatus.SOURCE_PRESENT:
+                continue
+            (_, f) = node.artefacts[0]
+            scanned_deps = node.scan(f)
+            for d in scanned_deps:
+                try:
+                    dnode = self._find_node(d)
+                except NoSuchNode:
+                    dnode = self._add_source_node(artefact=d, scan=lambda f: [])
+                    dnode.is_scanned = True

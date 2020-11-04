@@ -5,17 +5,19 @@ import pytest
 from lcpymake import api
 
 
-def info_dummy_rule(sources, targets):
-    info = f'build target {targets} from sources {sources}'
-    return info
+def dummy():
+    def info(sources, targets):
+        info = f'build target {targets} from sources {sources}'
+        return info
+
+    def run(sources, targets):
+        print(sources)
+        print(targets)
+
+    return api.Rule(info=info, run=run)
 
 
-def run_dummy_rule(sources, targets):
-    print(sources)
-    print(targets)
-
-
-dummy_rule = api.Rule(info_dummy_rule, run_dummy_rule)
+dummy_rule = dummy()
 
 # pylint:disable=R0201
 
@@ -24,9 +26,9 @@ class TestGraph:
 
     def test_graph(self, datadir):
         g = api.create(srcdir=Path(datadir) / 'src', sandbox=Path(datadir) / 'sandbox')
-        api.create_source_node(g, 'foo.cpp')
-        api.create_source_node(g, 'bar.cpp')
-        api.create_source_node(g, 'main.cpp')
+        api.create_source_node(g, 'foo.cpp', scan=None)
+        api.create_source_node(g, 'bar.cpp', scan=None)
+        api.create_source_node(g, 'main.cpp', scan=None)
         api.create_built_node(g, artefacts=['foo.o'], sources=[
             'foo.cpp'], rule=dummy_rule)
         api.create_built_node(g, artefacts=['bar.o'], sources=[
@@ -58,7 +60,7 @@ class TestGraph:
         assert api.to_json(g) == j1
 
         with pytest.raises(api.ArtefactSeenSeveralTimes):
-            api.create_source_node(g, 'main.cpp')
+            api.create_source_node(g, 'main.cpp', scan=None)
         assert api.to_json(g) == j1
 
         with pytest.raises(api.NoSuchNode):
