@@ -120,5 +120,10 @@ class World:
             (what, count) = counter[0]
             if count > 1:
                 raise ArtefactSeenSeveralTimes(f'{what}')
-
         look_for_doublons_in_artefacts()
+
+        def look_for_missing_source():
+            for node in self.nodes:
+                for (_, source) in node.sources:
+                    self._find_node(source)
+        look_for_missing_source()

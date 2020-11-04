@@ -5,6 +5,7 @@ from lcpymake.model import World
 from lcpymake.model import ArtefactSeenSeveralTimes
 from lcpymake.model import CannotAddARuleForASourceNode
 from lcpymake.model import NodeAlreadyHasARule
+from lcpymake.model import NoSuchNode
 from lcpymake.model import Rule
 # pylint:enable=W0611
 

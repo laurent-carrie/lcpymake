@@ -7,7 +7,7 @@ import string
 
 
 def info(sources, targets):
-    info = f'build target {targets} from sources {[sources]}'
+    info = f'build target {targets} from sources {sources}'
     return info
 
 
@@ -18,7 +18,7 @@ def run(sources, targets):
 dummy_rule = api.Rule(info, run)
 
 
-class Test_1:
+class Test_graph:
 
     def test_graph(self, datadir):
         g = api.create()
@@ -38,19 +38,24 @@ class Test_1:
               {'artefacts': ['bar.cpp']},
               {'artefacts': ['main.cpp']},
               {'artefacts': ['foo.o'],
-               'rule': "build target ['foo.o'] from sources [['foo.cpp']]",
+               'rule': "build target ['foo.o'] from sources ['foo.cpp']",
                'sources': ['foo.cpp']},
               {'artefacts': ['bar.o'],
-               'rule': "build target ['bar.o'] from sources [['bar.cpp']]",
+               'rule': "build target ['bar.o'] from sources ['bar.cpp']",
                'sources': ['bar.cpp']},
               {'artefacts': ['main.o'],
-               'rule': "build target ['main.o'] from sources [['main.cpp']]",
+               'rule': "build target ['main.o'] from sources ['main.cpp']",
                'sources': ['main.cpp']},
               {'artefacts': ['hello'],
-               'rule': "build target ['hello'] from sources [['main.o', 'bar.o', 'foo.o']]",
+               'rule': "build target ['hello'] from sources ['main.o', 'bar.o', 'foo.o']",
                'sources': ['main.o', 'bar.o', 'foo.o']}]
         assert api.to_json(g) == j1
 
         with pytest.raises(api.ArtefactSeenSeveralTimes):
             api.create_source_node(g, 'main.cpp')
+        assert api.to_json(g) == j1
+
+        with pytest.raises(api.NoSuchNode):
+            api.create_built_node(g, artefacts=['blah'], sources=[
+                'missing.cpp'], rule=dummy_rule)
         assert api.to_json(g) == j1
