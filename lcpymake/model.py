@@ -41,6 +41,13 @@ class TargetArtefactNotBuilt(Exception):
         self.filename = filename
 
 
+class RuleFailed(Exception):
+    def __init__(self, filename, msg):
+        Exception.__init__(self, f'build failed for  : {filename} ; message is : {msg}')
+        self.filename = filename
+        self.msg = msg
+
+
 class Rule:
     def __init__(self, info: Callable[[List[str], List[str]], str],
                  run: Callable[[List[str], List[str]], bool]):
@@ -90,7 +97,11 @@ class Node:
     def run(self):
         sources = [self.sandbox / f for (_, f) in self.sources]
         artefacts = [self.sandbox / f for (_, f) in self.artefacts]
-        return self.rule.run(sources=sources, targets=artefacts)
+        try:
+            success = self.rule.run(sources=sources, targets=artefacts)
+            return success
+        except Exception as e:
+            raise RuleFailed(self.rule_info, e) from e
 
     @property
     def label(self):

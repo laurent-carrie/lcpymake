@@ -6,11 +6,15 @@ import pytest
 from lcpymake import api
 
 
-def compile_rule(broken):
+def compile_rule(choice):
     def command(sources, targets):
-        if not broken:
+        if choice == 'ok':
             return ['g++', '-o', str(targets[0]), '-c', str(sources[0])]
-        return ['g++', '-o', str(targets[0].parent / 'toto.o'), '-c', str(sources[0])]
+        if choice == 'bad target':
+            return ['g++', '-o', str(targets[0].parent / 'toto.o'), '-c', str(sources[0])]
+        if choice == 'bad command':
+            return ['g++++++', '-o', str(targets[0].parent / 'toto.o'), '-c', str(sources[0])]
+        raise ValueError(choice)
 
     def info(sources, targets):
         return ' '.join(command(sources, targets))
@@ -24,8 +28,9 @@ def compile_rule(broken):
     return api.Rule(info, run)
 
 
-cpp_compile: api.Rule = compile_rule(False)
-cpp_compile_broken: api.Rule = compile_rule(True)
+cpp_compile: api.Rule = compile_rule('ok')
+cpp_compile_bad_target: api.Rule = compile_rule('bad target')
+cpp_compile_bad_command: api.Rule = compile_rule('bad command')
 
 
 def link_rule():
@@ -94,12 +99,22 @@ class TestBuild:
         assert (Path(datadir) / 'sandbox/main.o').exists()
         assert (Path(datadir) / 'sandbox/hello').exists()
 
-    def test_build_does_not_produce_target(self, datadir):
+    def test_build_rule_does_not_produce_target(self, datadir):
         g = api.create(srcdir=Path(datadir) / 'src', sandbox=Path(datadir) / 'sandbox')
         api.create_source_node(g, 'foo.cpp', scan=None)
         api.create_built_node(g, artefacts=['foo.o'], sources=[
-            'foo.cpp'], rule=cpp_compile_broken)
+            'foo.cpp'], rule=cpp_compile_bad_target)
         print()
         api.gprint(g)
         with pytest.raises(api.TargetArtefactNotBuilt):
+            api.build(g)
+
+    def test_build_rule_fails(self, datadir):
+        g = api.create(srcdir=Path(datadir) / 'src', sandbox=Path(datadir) / 'sandbox')
+        api.create_source_node(g, 'foo.cpp', scan=None)
+        api.create_built_node(g, artefacts=['foo.o'], sources=[
+            'foo.cpp'], rule=cpp_compile_bad_command)
+        print()
+        api.gprint(g)
+        with pytest.raises(api.RuleFailed):
             api.build(g)
