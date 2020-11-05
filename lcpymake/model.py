@@ -31,7 +31,7 @@ class NodeAlreadyHasARule(Exception):
 
 class SourceFileMissing(Exception):
     def __init__(self, filename):
-        Exception.__init__(self)
+        Exception.__init__(self, f'source file missing : {filename}')
         self.filename = filename
 
 
@@ -94,9 +94,11 @@ class Node:
     def to_json(self):
         world = {'artefacts': [str(p) for (_, p) in self.artefacts]}
         world.update({'status': self.status.name})
-        if not self.is_source:
+        if not self.is_source and not self.is_scanned:
             world.update({'sources': [str(p) for (_, p) in self.sources]})
             world.update({'rule': self.rule_info})
+        if self.is_source:
+            world.update({'scanned_deps': [str(p) for p in self.deps]})
         return world
 
     @property
@@ -190,8 +192,12 @@ class World:
     def _consumed_artefacts(self) -> Set[str]:
         return {source for node in self.nodes for (_, source) in node.sources}
 
+    def _scanned_artefacts(self) -> Set[str]:
+        return {filename for node in self.nodes for (_, filename)
+                in node.artefacts if node.is_scanned}
+
     def _leaf_artefacts(self) -> Set[str]:
-        return self._all_artefacts() - self._consumed_artefacts()
+        return self._all_artefacts() - self._consumed_artefacts() - self._scanned_artefacts()
 
     def _leaf_nodes(self) -> Set[Node]:
         return {self._find_node(artefact) for artefact in self._leaf_artefacts()}
@@ -217,6 +223,11 @@ class World:
             print(f"{'...'*indent}{line1}")
             if not node.is_source:
                 print(f"{'...'*(indent+1)}rule : {node.rule_info}")
+            else:
+                for fdep in node.deps:
+                    line = colored(fdep, 'yellow', attrs=[]) + ' (scanned)'
+                    print(f"{'...' * (indent + 1)}{line}")
+
             for (_, source) in node.sources:
                 source_node = self._find_node(source)
                 print_tree(indent + 1, source_node)
@@ -226,13 +237,19 @@ class World:
 
     def _mount(self):
         for node in self.nodes:
-            if not node.is_source:
+            if not (node.is_source or node.is_scanned):
                 continue
             for (_, f) in node.artefacts:
-                if node.status != NodeStatus.SOURCE_PRESENT:
+                if node.status in {NodeStatus.SOURCE_MISSING}:
                     raise SourceFileMissing(f)
-                (self.sandbox / f).parent.mkdir(parents=True, exist_ok=True)
-                (self.sandbox / f).write_bytes((self.srcdir / f).read_bytes())
+                if node.status in {NodeStatus.SOURCE_PRESENT, NodeStatus.SOURCE_PRESENT,
+                                   NodeStatus.SCANNED_PRESENT_DEP}:
+                    (self.sandbox / f).parent.mkdir(parents=True, exist_ok=True)
+                    (self.sandbox / f).write_bytes((self.srcdir / f).read_bytes())
+                    continue
+                if node.status in {NodeStatus.BUILT_PRESENT, NodeStatus.BUILT_MISSING}:
+                    continue
+                raise Exception(f'implementation error {node.status.name}')
 
     def _not_built(self):
         return [node for node in self.nodes if node.status == NodeStatus.BUILT_MISSING]
@@ -253,6 +270,7 @@ class World:
         return [node for node in self.nodes if self._node_can_be_built(node)]
 
     def _build(self):
+        self._scan()
         self._mount()
         while True:
             before = len(self._not_built())
@@ -276,3 +294,10 @@ class World:
                 except NoSuchNode:
                     dnode = self._add_source_node(artefact=d, scan=lambda f: [])
                     dnode.is_scanned = True
+                    dnode.is_source = False
+                    try:
+                        self._is_valid()
+                    except Exception as e:
+                        self.nodes.pop()
+                        raise e
+                node.deps.append(d)

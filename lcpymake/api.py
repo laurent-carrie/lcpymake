@@ -18,6 +18,11 @@ def create(srcdir: Path, sandbox: Path):
 
 
 def create_source_node(world: World, artefact: str, scan):
+    if scan is None:
+        def scan(_):
+            return []
+    if not callable(scan):
+        raise ValueError('scan is not a callable')
     world._add_source_node(artefact=artefact, scan=scan)
 
 

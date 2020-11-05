@@ -19,6 +19,7 @@ def dummy():
 
 dummy_rule = dummy()
 
+
 # pylint:disable=R0201
 
 
@@ -38,9 +39,10 @@ class TestGraph:
         api.create_built_node(g, artefacts=['hello'], sources=[
             'main.o', 'bar.o', 'foo.o'], rule=dummy_rule)
 
-        j1 = [{'artefacts': ['foo.cpp'], 'status': 'SOURCE_MISSING'},
-              {'artefacts': ['bar.cpp'], 'status': 'SOURCE_PRESENT'},
-              {'artefacts': ['main.cpp'], 'status': 'SOURCE_MISSING'},
+        j1 = [{'artefacts': ['foo.cpp'], 'scanned_deps': [], 'status': 'SOURCE_MISSING'},
+              {'artefacts': ['bar.cpp'], 'scanned_deps': [], 'status': 'SOURCE_PRESENT'},
+              {'artefacts': ['main.cpp'], 'scanned_deps': [],
+                  'status': 'SOURCE_MISSING'},
               {'artefacts': ['foo.o'],
                'rule': "build target ['foo.o'] from sources ['foo.cpp']",
                'sources': ['foo.cpp'],

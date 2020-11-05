@@ -61,9 +61,10 @@ class TestBuild:
         api.create_built_node(g, artefacts=['hello'], sources=[
             'main.o', 'foo.o', 'bar.o'], rule=cpp_link)
 
-        j1 = [{'artefacts': ['foo.cpp'], 'status': 'SOURCE_PRESENT'},
-              {'artefacts': ['bar.cpp'], 'status': 'SOURCE_PRESENT'},
-              {'artefacts': ['main.cpp'], 'status': 'SOURCE_PRESENT'},
+        j1 = [{'artefacts': ['foo.cpp'], 'scanned_deps': [], 'status': 'SOURCE_PRESENT'},
+              {'artefacts': ['bar.cpp'], 'scanned_deps': [], 'status': 'SOURCE_PRESENT'},
+              {'artefacts': ['main.cpp'], 'scanned_deps': [],
+                  'status': 'SOURCE_PRESENT'},
               {'artefacts': ['foo.o'],
                'rule': 'g++ -o foo.o -c foo.cpp',
                'sources': ['foo.cpp'],
