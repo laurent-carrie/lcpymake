@@ -48,5 +48,9 @@ def scan_artefacts(world):
     world._scan()
 
 
+def add_automatic_rule(world, from_suffix: str, to_suffix: str, rule: Rule):
+    world._add_automatic_rule(from_suffix=from_suffix, to_suffix=to_suffix, rule=rule)
+
+
 def build(world):
     return world._build()

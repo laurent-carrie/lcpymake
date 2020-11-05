@@ -40,6 +40,9 @@ cpp_compile_bad_target: api.Rule = compile_rule('bad target')
 cpp_compile_bad_command: api.Rule = compile_rule('bad command')
 
 
+link_counter = 0
+
+
 def link_rule():
     def command(sources, targets):
         return ['g++', '-o', str(targets[0])] + [str(s) for s in sources]
@@ -48,6 +51,10 @@ def link_rule():
         return ' '.join(command(sources, targets))
 
     def run(sources, targets):
+        # pylint:disable=W0603
+        global link_counter
+        # pylint:enable=W0603
+        link_counter += 1
         p: subprocess.CompletedProcess = subprocess.run(
             args=command(sources, targets), check=True)
         return p.returncode == 0
@@ -164,9 +171,17 @@ class TestBuild:
         assert j2[5]['ok_build'] == j3[5]['ok_build']
         assert j2[5]['digest'] != j3[5]['digest']
 
+        # pylint:disable=W0603
+        global link_counter
+        # pylint:enable=W0603
+
         compile_counter = 0
+        link_counter = 0
         api.build(g)
+        # check that only one file wash compiled
         assert compile_counter == 1
+        # check that link was not rerun
+        assert link_counter == 0
 
     def test_build_rule_does_not_produce_target(self, datadir):
         g = api.create(srcdir=Path(datadir) / 'src', sandbox=Path(datadir) / 'sandbox')

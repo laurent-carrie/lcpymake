@@ -175,6 +175,7 @@ class World:
         self.nodes: List[Node] = []
         self.srcdir = srcdir
         self.sandbox = sandbox
+        self.automatic_rules = {}
 
     def _find_node(self, filename) -> Node:
         # pylint:disable=W0120
