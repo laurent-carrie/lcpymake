@@ -11,9 +11,8 @@ def do_nothing_rule():
         print(targets)
         return 'do nothing'
 
-    def run(sources, targets):
-        print(sources)
-        print(targets)
+    def run(_):
+        pass
 
     return api.Rule(info, run)
 

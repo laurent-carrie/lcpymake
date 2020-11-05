@@ -1,12 +1,16 @@
 from pathlib import Path
 import subprocess
-
+# pylint:disable=E0401
+import pytest
+# pylint:enable=E0401
 from lcpymake import api
 
 
-def compile_rule():
+def compile_rule(broken):
     def command(sources, targets):
-        return ['g++', '-o', str(targets[0]), '-c', str(sources[0])]
+        if not broken:
+            return ['g++', '-o', str(targets[0]), '-c', str(sources[0])]
+        return ['g++', '-o', str(targets[0].parent / 'toto.o'), '-c', str(sources[0])]
 
     def info(sources, targets):
         return ' '.join(command(sources, targets))
@@ -20,12 +24,13 @@ def compile_rule():
     return api.Rule(info, run)
 
 
-cpp_compile: api.Rule = compile_rule()
+cpp_compile: api.Rule = compile_rule(False)
+cpp_compile_broken: api.Rule = compile_rule(True)
 
 
 def link_rule():
     def command(sources, targets):
-        return ['g++', '-o', str(targets[0])] + sources
+        return ['g++', '-o', str(targets[0])] + [str(s) for s in sources]
 
     def info(sources, targets):
         return ' '.join(command(sources, targets))
@@ -33,7 +38,6 @@ def link_rule():
     def run(sources, targets):
         p: subprocess.CompletedProcess = subprocess.run(
             args=command(sources, targets), check=True)
-        print(p.args)
         return p.returncode == 0
 
     return api.Rule(info, run)
@@ -89,3 +93,13 @@ class TestBuild:
         assert (Path(datadir) / 'sandbox/bar.o').exists()
         assert (Path(datadir) / 'sandbox/main.o').exists()
         assert (Path(datadir) / 'sandbox/hello').exists()
+
+    def test_build_does_not_produce_target(self, datadir):
+        g = api.create(srcdir=Path(datadir) / 'src', sandbox=Path(datadir) / 'sandbox')
+        api.create_source_node(g, 'foo.cpp', scan=None)
+        api.create_built_node(g, artefacts=['foo.o'], sources=[
+            'foo.cpp'], rule=cpp_compile_broken)
+        print()
+        api.gprint(g)
+        with pytest.raises(api.TargetArtefactNotBuilt):
+            api.build(g)

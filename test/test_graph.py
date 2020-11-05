@@ -7,7 +7,7 @@ from lcpymake import api
 
 def dummy():
     def info(sources, targets):
-        info = f'build target {targets} from sources {sources}'
+        info = f'build target {[str(t) for t in targets]} from sources {[str(s) for s in sources]}'
         return info
 
     def run(sources, targets):

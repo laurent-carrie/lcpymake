@@ -14,7 +14,6 @@ def compile_rule():
     def run(sources, targets):
         p: subprocess.CompletedProcess = subprocess.run(
             args=command(sources, targets), check=True)
-        print(p.args)
         return p.returncode == 0
 
     return api.Rule(info, run)
@@ -25,7 +24,7 @@ cpp_compile: api.Rule = compile_rule()
 
 def link_rule():
     def command(sources, targets):
-        return ['g++', '-o', str(targets[0])] + sources
+        return ['g++', '-o', str(targets[0])] + [str(s) for s in sources]
 
     def info(sources, targets):
         return ' '.join(command(sources, targets))
@@ -33,7 +32,6 @@ def link_rule():
     def run(sources, targets):
         p: subprocess.CompletedProcess = subprocess.run(
             args=command(sources, targets), check=True)
-        print(p.args)
         return p.returncode == 0
 
     return api.Rule(info, run)
@@ -117,6 +115,12 @@ class TestBuildWithScan:
                                    'sources': ['main.o', 'foo.o', 'bar.o'],
                                    'status': 'BUILT_MISSING'},
                                   {'artefacts': ['bar.h'], 'status': 'SCANNED_PRESENT_DEP'}]
+        assert api.build(g)
+        assert (Path(datadir) / 'sandbox/foo.o').exists()
+        assert (Path(datadir) / 'sandbox/bar.o').exists()
+        assert (Path(datadir) / 'sandbox/main.o').exists()
+        assert (Path(datadir) / 'sandbox/hello').exists()
+
         assert api.build(g)
         assert (Path(datadir) / 'sandbox/foo.o').exists()
         assert (Path(datadir) / 'sandbox/bar.o').exists()

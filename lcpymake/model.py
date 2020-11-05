@@ -35,6 +35,12 @@ class SourceFileMissing(Exception):
         self.filename = filename
 
 
+class TargetArtefactNotBuilt(Exception):
+    def __init__(self, filename):
+        Exception.__init__(self, f'artefact was not built for : {filename}')
+        self.filename = filename
+
+
 class Rule:
     def __init__(self, info: Callable[[List[str], List[str]], str],
                  run: Callable[[List[str], List[str]], bool]):
@@ -75,8 +81,8 @@ class Node:
             if rule is None:
                 raise ValueError('rule not defined')
             self.rule = rule
-            not_qualified_sources = [s for (_, s) in self.sources]
-            not_qualified_artefacts = [s for (_, s) in self.artefacts]
+            not_qualified_sources = [Path(s) for (_, s) in self.sources]
+            not_qualified_artefacts = [Path(s) for (_, s) in self.artefacts]
             self.rule_info = rule.info(
                 sources=not_qualified_sources, targets=not_qualified_artefacts)
         self.scan = scan
@@ -84,11 +90,11 @@ class Node:
     def run(self):
         sources = [self.sandbox / f for (_, f) in self.sources]
         artefacts = [self.sandbox / f for (_, f) in self.artefacts]
-        self.rule.run(sources=sources, targets=artefacts)
+        return self.rule.run(sources=sources, targets=artefacts)
 
     @property
     def label(self):
-        not_qualified_artefacts = [s for (_, s) in self.artefacts]
+        not_qualified_artefacts = [str(s) for (_, s) in self.artefacts]
         return ';'.join(not_qualified_artefacts)
 
     def to_json(self):
@@ -269,13 +275,33 @@ class World:
     def _can_be_built(self) -> List[Node]:
         return [node for node in self.nodes if self._node_can_be_built(node)]
 
+    def _move_node_artefacts(self, node):
+        for (_, a) in node.artefacts:
+            source: Path = self.sandbox / a
+            if not source.exists():
+                continue
+            target: Path = source.with_suffix(source.suffix + '.copy')
+            source.rename(target)
+
+    def _check_rule_output(self, node):
+        for (_, a) in node.artefacts:
+            new_a: Path = self.sandbox / a
+            # old_a: Path = new_a.with_suffix(new_a.suffix + '.copy')
+            if not new_a.exists():
+                raise TargetArtefactNotBuilt(a)
+
     def _build(self):
         self._scan()
         self._mount()
+        for node in self.nodes:
+            if not (node.is_source or node.is_scanned):
+                self._move_node_artefacts(node)
         while True:
             before = len(self._not_built())
             for node in self._can_be_built():
-                node.run()
+                success = node.run()
+                self._check_rule_output(node)
+                print(f'{node.label}, success : {success}')
             after = len(self._not_built())
             if after == 0:
                 return True
