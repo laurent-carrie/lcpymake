@@ -3,6 +3,8 @@ from enum import Enum
 from pathlib import Path
 from typing import List, Tuple, Set, Callable
 import collections
+import hashlib
+
 # pylint:disable=E0401
 # don't know why pylint complains about termcolor
 from termcolor import colored
@@ -60,8 +62,9 @@ class NodeStatus(Enum):
     SOURCE_MISSING = 2
     BUILT_PRESENT = 3
     BUILT_MISSING = 4
-    SCANNED_PRESENT_DEP = 5
-    SCANNED_MISSING_DEP = 6
+    NEEDS_REBUILT = 5
+    SCANNED_PRESENT_DEP = 6
+    SCANNED_MISSING_DEP = 7
 
 
 class Node:
@@ -77,6 +80,7 @@ class Node:
         self.is_source = None
         self.is_scanned = None
         self.deps = []
+        self.ok_build = None
         if sources is None:
             self.sources = []
         else:
@@ -93,6 +97,31 @@ class Node:
             self.rule_info = rule.info(
                 sources=not_qualified_sources, targets=not_qualified_artefacts)
         self.scan = scan
+
+    def deps_hash_hex(self):
+        if self.is_source or self.is_scanned:
+            raise Exception('implementation error')
+        node_hash = hashlib.sha256()
+        node_hash.update(str.encode(self.rule_info))
+        for (_, s) in self.artefacts:
+            f: Path = self.sandbox / s
+            if f.exists():
+                node_hash.update(f.read_bytes())
+            else:
+                return None
+        for (_, s) in self.sources:
+            f: Path = self.sandbox / s
+            if f.exists():
+                node_hash.update(f.read_bytes())
+            else:
+                return None
+        for s in self.deps:
+            f: Path = self.sandbox / s
+            if f.exists():
+                node_hash.update(f.read_bytes())
+            else:
+                return None
+        return node_hash.hexdigest()
 
     def run(self):
         sources = [self.sandbox / f for (_, f) in self.sources]
@@ -116,6 +145,10 @@ class Node:
             world.update({'rule': self.rule_info})
         if self.is_source:
             world.update({'scanned_deps': [str(p) for p in self.deps]})
+        if not (self.is_source or self.is_scanned):
+            world.update({'digest': self.deps_hash_hex()})
+            world.update({'ok_build': self.ok_build})
+
         return world
 
     @property
@@ -130,7 +163,9 @@ class Node:
             return NodeStatus.SOURCE_MISSING
 
         if {(self.sandbox / s).exists() for (_, s) in self.artefacts} == {True}:
-            return NodeStatus.BUILT_PRESENT
+            if self.ok_build is not None and (self.ok_build == self.deps_hash_hex()):
+                return NodeStatus.BUILT_PRESENT
+            return NodeStatus.NEEDS_REBUILT
         return NodeStatus.BUILT_MISSING
 
 
@@ -154,6 +189,8 @@ class World:
         # pylint:enable=W0120
 
     def _to_json(self):
+        self._scan()
+        self._mount(allow_missing=True)
         world_dict = [n.to_json() for n in self.nodes]
         world_dict_str = json.dumps(world_dict)
         j = json.loads(world_dict_str)
@@ -235,6 +272,8 @@ class World:
             elif status == NodeStatus.BUILT_MISSING:
                 line1 = colored(node.label, 'blue', attrs=[
                                 'reverse']) + ' (built missing)'
+            elif status == NodeStatus.NEEDS_REBUILT:
+                line1 = colored(node.label, 'red', attrs=[]) + ' (built not up to date)'
             else:
                 raise Exception('internal error')
             print(f"{'...'*indent}{line1}")
@@ -252,13 +291,15 @@ class World:
         for node in self._leaf_nodes():
             print_tree(0, node)
 
-    def _mount(self):
+    def _mount(self, allow_missing):
         for node in self.nodes:
             if not (node.is_source or node.is_scanned):
                 continue
             for (_, f) in node.artefacts:
                 if node.status in {NodeStatus.SOURCE_MISSING}:
-                    raise SourceFileMissing(f)
+                    if not allow_missing:
+                        raise SourceFileMissing(f)
+                    continue
                 if node.status in {NodeStatus.SOURCE_PRESENT, NodeStatus.SOURCE_PRESENT,
                                    NodeStatus.SCANNED_PRESENT_DEP}:
                     (self.sandbox / f).parent.mkdir(parents=True, exist_ok=True)
@@ -269,10 +310,11 @@ class World:
                 raise Exception(f'implementation error {node.status.name}')
 
     def _not_built(self):
-        return [node for node in self.nodes if node.status == NodeStatus.BUILT_MISSING]
+        return [node for node in self.nodes
+                if node.status in {NodeStatus.BUILT_MISSING, NodeStatus.NEEDS_REBUILT}]
 
     def _node_can_be_built(self, node: Node):
-        if node.status != NodeStatus.BUILT_MISSING:
+        if node.status not in {NodeStatus.BUILT_MISSING, NodeStatus.NEEDS_REBUILT}:
             return False
         for (_, source) in node.sources:
             node_source = self._find_node(source)
@@ -303,20 +345,24 @@ class World:
 
     def _build(self):
         self._scan()
-        self._mount()
-        for node in self.nodes:
-            if not (node.is_source or node.is_scanned):
-                self._move_node_artefacts(node)
+        self._mount(allow_missing=False)
+
         while True:
             before = len(self._not_built())
             for node in self._can_be_built():
+                if (node.ok_build is not None) and node.ok_build == node.deps_hash_hex():
+                    continue
+                self._move_node_artefacts(node)
                 success = node.run()
                 self._check_rule_output(node)
+                node.ok_build = node.deps_hash_hex()
                 print(f'{node.label}, success : {success}')
             after = len(self._not_built())
             if after == 0:
+                self._stamp()
                 return True
             if before == after:
+                self._stamp()
                 return False
 
     def _scan(self):
@@ -337,4 +383,9 @@ class World:
                     except Exception as e:
                         self.nodes.pop()
                         raise e
-                node.deps.append(d)
+                if d not in node.deps:
+                    node.deps.append(d)
+
+    def _stamp(self):
+        with open((self.sandbox) / 'lcpymake.json', 'w') as fin:
+            json.dump(self._to_json(), fin)
