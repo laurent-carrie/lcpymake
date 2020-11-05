@@ -175,6 +175,7 @@ class World:
         self.nodes: List[Node] = []
         self.srcdir = srcdir
         self.sandbox = sandbox
+        sandbox.mkdir(parents=True, exist_ok=True)
         self.automatic_rules = {}
 
     def _find_node(self, filename) -> Node:
@@ -371,7 +372,7 @@ class World:
             if node.status != NodeStatus.SOURCE_PRESENT:
                 continue
             (_, f) = node.artefacts[0]
-            scanned_deps = node.scan(f)
+            scanned_deps = node.scan(self.srcdir / f)
             for d in scanned_deps:
                 try:
                     dnode = self._find_node(d)

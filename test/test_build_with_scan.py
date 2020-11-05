@@ -41,7 +41,7 @@ cpp_link: api.Rule = link_rule()
 
 
 def scan_cpp(f):
-    if f == 'main.cpp':
+    if f.name == 'main.cpp':
         return ['bar.h']
     return []
 
