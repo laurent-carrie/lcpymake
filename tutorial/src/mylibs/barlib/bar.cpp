@@ -1,5 +1,5 @@
 #include <iostream>
-#include "bar.h"
+#include "barlib/bar.h"
 
 int bar(int i) {
     return i ;

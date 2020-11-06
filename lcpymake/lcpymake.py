@@ -22,7 +22,13 @@ def main(script, print_, build_):
     print(f'hello world {script}')
     sys.path.append(str(Path(script).absolute().parent))
     exec(f"from {str(Path(script).with_suffix('').name)} import main as client_main")
-    g: model.World = eval('client_main()')
+
+    try:
+        g: model.World = eval('client_main()')
+    except (model.NoSuchNode) as e:
+        click.echo(click.style(str(type(e)), bg='red', fg='black'))
+        click.echo(click.style(str(e), bg='red', fg='black'))
+        sys.exit(1)
 
     if not isinstance(g, model.World):
         raise ValueError(
@@ -34,7 +40,12 @@ def main(script, print_, build_):
     click.echo(click.style(str(g.sandbox), bg='blue', fg='white'))
 
     if print_:
+        g._scan()
         g._print()
 
     if build_:
-        g._build()
+        try:
+            g._build()
+        except (model.SourceFileMissing, model.RuleFailed) as e:
+            click.echo(click.style(str(type(e)), bg='red', fg='black'))
+            click.echo(click.style(str(e), bg='red', fg='black'))

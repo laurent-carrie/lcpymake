@@ -17,8 +17,8 @@ class ArtefactSeenSeveralTimes(Exception):
 
 
 class NoSuchNode(Exception):
-    def __init__(self):
-        Exception.__init__(self)
+    def __init__(self, filename):
+        Exception.__init__(self, f'{filename}')
 
 
 class CannotAddARuleForASourceNode(Exception):
@@ -187,7 +187,7 @@ class World:
             else:
                 continue
         else:
-            raise NoSuchNode()
+            raise NoSuchNode(filename)
         # pylint:enable=W0120
 
     def _to_json(self):
@@ -320,11 +320,12 @@ class World:
             return False
         for (_, source) in node.sources:
             node_source = self._find_node(source)
-            if node_source.status in {NodeStatus.BUILT_MISSING, NodeStatus.SOURCE_MISSING}:
+            if node_source.status in {NodeStatus.BUILT_MISSING, NodeStatus.SOURCE_MISSING,
+                                      NodeStatus.NEEDS_REBUILT}:
                 return False
             if node_source.status in {NodeStatus.BUILT_PRESENT, NodeStatus.SOURCE_PRESENT}:
                 continue
-            raise Exception('implementation error')
+            raise Exception(f'implementation error {node_source.status.name}')
         return True
 
     def _can_be_built(self) -> List[Node]:

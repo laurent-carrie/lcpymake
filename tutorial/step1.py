@@ -3,13 +3,15 @@ from pathlib import Path
 from lcpymake import api
 
 # a rule that doesn't do anything
+# pylint:disable=W0613
 
 
 def do_nothing_rule():
-    def info(_):
+
+    def info(sources, targets):
         return 'do nothing'
 
-    def run(_):
+    def run(sources, targets):
         pass
 
     return api.Rule(info, run)
@@ -31,13 +33,15 @@ def main():
     g = api.create(srcdir=here / 'src', sandbox=here / 'build-step-1')
 
     # add source files
-    api.create_source_node(g, artefact='foo.cpp', scan=None)
-    api.create_source_node(g, artefact='bar.cpp', scan=None)
+    api.create_source_node(g, artefact='mylibs/foolib/foo.cpp', scan=None)
+    api.create_source_node(g, artefact='mylibs/barlib/bar.cpp', scan=None)
     api.create_source_node(g, artefact='missing-foo.cpp', scan=None)
 
     # add built files
-    api.create_built_node(g, artefacts=['foo.o'], sources=['foo.cpp'], rule=rule_1)
-    api.create_built_node(g, artefacts=['bar.o'], sources=['bar.cpp'], rule=rule_1)
+    api.create_built_node(
+        g, artefacts=['mylibs/foolib/foo.o'], sources=['mylibs/foolib/foo.cpp'], rule=rule_1)
+    api.create_built_node(
+        g, artefacts=['mylibs/foolib/bar.o'], sources=['mylibs/barlib/bar.cpp'], rule=rule_1)
     api.create_built_node(g, artefacts=['hello'], sources=[
                           'foo.o', 'bar.o'], rule=rule_1)
 

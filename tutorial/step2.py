@@ -17,12 +17,14 @@ def main():
     g = api.create(srcdir=here / 'src', sandbox=here / 'build-step-2')
 
     # add source files
-    api.create_source_node(g, artefact='foo.cpp', scan=None)
-    api.create_source_node(g, artefact='bar.cpp', scan=None)
+    api.create_source_node(g, artefact='mylibs/foolib/foo.cpp', scan=None)
+    api.create_source_node(g, artefact='mylibs/barlib/bar.cpp', scan=None)
 
     # add built files
-    api.create_built_node(g, artefacts=['foo.o'], sources=['foo.cpp'], rule=cpp_compile)
-    api.create_built_node(g, artefacts=['bar.o'], sources=['bar.cpp'], rule=cpp_compile)
+    api.create_built_node(g, artefacts=['mylibs/foolib/foo.o'],
+                          sources=['mylibs/foolib/foo.cpp'], rule=cpp_compile)
+    api.create_built_node(g, artefacts=['mylibs/barlib/bar.o'],
+                          sources=['mylibs/barlib/bar.cpp'], rule=cpp_compile)
     api.create_built_node(g, artefacts=['hello'], sources=[
                           'foo.o', 'bar.o'], rule=cpp_link)
 
