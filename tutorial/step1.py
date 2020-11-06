@@ -6,9 +6,7 @@ from lcpymake import api
 
 
 def do_nothing_rule():
-    def info(sources, targets):
-        print(sources)
-        print(targets)
+    def info(_):
         return 'do nothing'
 
     def run(_):
@@ -47,7 +45,9 @@ def main():
     # green are the source files
     # red are source files that don't exist (error !)
     # blue are built files
-    api.gprint(g)
+    # api.gprint(g)
+
+    return g
 
 
 if __name__ == '__main__':

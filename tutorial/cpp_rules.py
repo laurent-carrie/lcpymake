@@ -23,7 +23,7 @@ cpp_compile: api.Rule = compile_rule()
 
 def link_rule():
     def command(sources, targets):
-        return ['g++', '-o', str(targets[0])] + sources
+        return ['g++', '-o', str(targets[0])] + [str(s) for s in sources]
 
     def info(sources, targets):
         return ' '.join(command(sources, targets))

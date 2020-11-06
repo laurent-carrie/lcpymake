@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from lcpymake import api
-from .cpp_rules import cpp_compile, cpp_link
+from tutorial.cpp_rules import cpp_compile, cpp_link
 
 
 def main():
@@ -26,14 +26,4 @@ def main():
     api.create_built_node(g, artefacts=['hello'], sources=[
                           'foo.o', 'bar.o'], rule=cpp_link)
 
-    # print the graph
-    # green are the source files
-    # red are source files that don't exist (error !)
-    # blue are built files
-    api.gprint(g)
-    api.build(g)
-    api.gprint(g)
-
-
-if __name__ == '__main__':
-    main()
+    return g
