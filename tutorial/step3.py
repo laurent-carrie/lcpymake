@@ -6,8 +6,7 @@ from tutorial.cpp_rules import cpp_link, compile_rule
 
 
 def scan_cpp(include_path):
-    def inner_scan_cpp(filename):
-        print(f'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCfilename : {filename}')
+    def _scan_cpp(filename):
         r = re.compile("#include +\"(.*)\".*")
         ret = []
         with open(str(filename), 'r') as fin:
@@ -15,16 +14,14 @@ def scan_cpp(include_path):
                 match = re.match(r, line)
                 if match:
                     depfile = match.group(1)
-                    print(f'YYYYYYYYYYYYYYYYYY depfile : {depfile}')
                     for p in include_path:
                         d: Path = p / depfile
-                        print(f'XXXXXXXXXXXXXXX  d : {d}')
                         if not d.exists():
                             continue
                         ret.append(d)
 
         return ret
-    return inner_scan_cpp
+    return _scan_cpp
 
 
 def main():

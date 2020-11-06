@@ -79,7 +79,7 @@ class Node:
         self.artefacts = artefacts
         self.is_source = None
         self.is_scanned = None
-        self.deps = []
+        self.deps_in_srcdir = []
         self.ok_build = None
         if sources is None:
             self.sources = []
@@ -115,7 +115,7 @@ class Node:
                 node_hash.update(f.read_bytes())
             else:
                 return None
-        for s in self.deps:
+        for s in self.deps_in_srcdir:
             f: Path = self.sandbox / s
             if f.exists():
                 node_hash.update(f.read_bytes())
@@ -144,7 +144,7 @@ class Node:
             world.update({'sources': [str(p) for (_, p) in self.sources]})
             world.update({'rule': self.rule_info})
         if self.is_source:
-            world.update({'scanned_deps': [str(p) for p in self.deps]})
+            world.update({'scanned_deps': [str(p) for p in self.deps_in_srcdir]})
         if not (self.is_source or self.is_scanned):
             world.update({'digest': self.deps_hash_hex()})
             world.update({'ok_build': self.ok_build})
@@ -282,7 +282,7 @@ class World:
             if not node.is_source:
                 print(f"{'...'*(indent+1)}rule : {node.rule_info}")
             else:
-                for fdep in node.deps:
+                for fdep in node.deps_in_srcdir:
                     line = colored(fdep, 'yellow', attrs=[]) + ' (scanned)'
                     print(f"{'...' * (indent + 1)}{line}")
 
@@ -310,7 +310,7 @@ class World:
                 if node.status in {NodeStatus.BUILT_PRESENT, NodeStatus.BUILT_MISSING}:
                     continue
                 raise Exception(f'implementation error {node.status.name}')
-            for f in node.deps:
+            for f in node.deps_in_srcdir:
                 (self.sandbox / f).write_bytes((self.srcdir / f).read_bytes())
 
     def _not_built(self):
@@ -359,9 +359,10 @@ class World:
                     continue
                 self._move_node_artefacts(node)
                 success = node.run()
+                if not success:
+                    raise RuleFailed(node.label, '')
                 self._check_rule_output(node)
                 node.ok_build = node.deps_hash_hex()
-                print(f'{node.label}, success : {success}')
             after = len(self._not_built())
             if after == 0:
                 self._stamp()
@@ -382,8 +383,8 @@ class World:
                     d = Path(d)
                 if d.is_absolute():
                     d = d.relative_to(self.srcdir)
-                if d not in node.deps:
-                    node.deps.append(d)
+                if d not in node.deps_in_srcdir:
+                    node.deps_in_srcdir.append(d)
 
     def _stamp(self):
         with open((self.sandbox) / 'lcpymake.json', 'w') as fin:
