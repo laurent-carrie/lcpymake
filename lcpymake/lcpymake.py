@@ -16,9 +16,11 @@ from lcpymake import model
               help='print build tree')
 @click.option('--script', required=True, type=str,
               help='python script to build graph')
+@click.option('--mount', 'mount_', required=False, default=False, is_flag=True,
+              help='mount source files into sandbox')
 @click.option('--build', 'build_', required=False, default=False, is_flag=True,
               help='run a build')
-def main(script, print_, build_):
+def main(script, print_, build_, mount_):
     print(f'hello world {script}')
     sys.path.append(str(Path(script).absolute().parent))
     exec(f"from {str(Path(script).with_suffix('').name)} import main as client_main")
@@ -43,8 +45,12 @@ def main(script, print_, build_):
         g._scan()
         g._print()
 
+    if mount_:
+        g._mount(allow_missing=True)
+
     if build_:
         try:
+            g._mount(allow_missing=False)
             g._build()
         except (model.SourceFileMissing, model.RuleFailed) as e:
             click.echo(click.style(str(type(e)), bg='red', fg='black'))

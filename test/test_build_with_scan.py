@@ -93,8 +93,7 @@ class TestBuildWithScan:
                'ok_build': None,
                'rule': 'g++ -o hello main.o foo.o bar.o',
                'sources': ['main.o', 'foo.o', 'bar.o'],
-               'status': 'BUILT_MISSING'},
-              {'artefacts': ['bar.h'], 'status': 'SCANNED_PRESENT_DEP'}]
+               'status': 'BUILT_MISSING'}]
         assert api.to_json(g) == j1
         print()
         api.gprint(g)
@@ -129,8 +128,7 @@ class TestBuildWithScan:
                'ok_build': None,
                'rule': 'g++ -o hello main.o foo.o bar.o',
                'sources': ['main.o', 'foo.o', 'bar.o'],
-               'status': 'BUILT_MISSING'},
-              {'artefacts': ['bar.h'], 'status': 'SCANNED_PRESENT_DEP'}]
+               'status': 'BUILT_MISSING'}]
         assert api.to_json(g) == j2
 
         assert api.build(g)

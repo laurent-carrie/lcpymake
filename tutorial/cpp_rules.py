@@ -1,10 +1,16 @@
 import subprocess
+from typing import List
+from pathlib import Path
 import lcpymake.api as api
 
 
-def compile_rule():
+def compile_rule(include_path: List[Path]):
     def command(sources, targets):
-        return ['g++', '-o', str(targets[0]), '-c', str(sources[0])]
+        ret = ['g++', '-o', str(targets[0]), '-c', str(sources[0])]
+        for p in include_path:
+            ret.append('-I')
+            ret.append(str(p))
+        return ret
 
     def info(sources, targets):
         return ' '.join(command(sources, targets))
@@ -16,9 +22,6 @@ def compile_rule():
         return p.returncode == 0
 
     return api.Rule(info, run)
-
-
-cpp_compile: api.Rule = compile_rule()
 
 
 def link_rule():

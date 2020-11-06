@@ -41,9 +41,9 @@ def main():
     api.create_built_node(
         g, artefacts=['mylibs/foolib/foo.o'], sources=['mylibs/foolib/foo.cpp'], rule=rule_1)
     api.create_built_node(
-        g, artefacts=['mylibs/foolib/bar.o'], sources=['mylibs/barlib/bar.cpp'], rule=rule_1)
+        g, artefacts=['mylibs/barlib/bar.o'], sources=['mylibs/barlib/bar.cpp'], rule=rule_1)
     api.create_built_node(g, artefacts=['hello'], sources=[
-                          'foo.o', 'bar.o'], rule=rule_1)
+                          'mylibs/foolib/foo.o', 'mylibs/barlib/bar.o'], rule=rule_1)
 
     # print the graph
     # green are the source files

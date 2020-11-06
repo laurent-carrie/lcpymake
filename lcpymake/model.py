@@ -310,6 +310,8 @@ class World:
                 if node.status in {NodeStatus.BUILT_PRESENT, NodeStatus.BUILT_MISSING}:
                     continue
                 raise Exception(f'implementation error {node.status.name}')
+            for f in node.deps:
+                (self.sandbox / f).write_bytes((self.srcdir / f).read_bytes())
 
     def _not_built(self):
         return [node for node in self.nodes
@@ -369,23 +371,17 @@ class World:
                 return False
 
     def _scan(self):
+        self._mount(allow_missing=True)
         for node in self.nodes:
             if node.status != NodeStatus.SOURCE_PRESENT:
                 continue
             (_, f) = node.artefacts[0]
-            scanned_deps = node.scan(self.srcdir / f)
+            scanned_deps = node.scan(self.sandbox / f)
             for d in scanned_deps:
-                try:
-                    dnode = self._find_node(d)
-                except NoSuchNode:
-                    dnode = self._add_source_node(artefact=d, scan=lambda f: [])
-                    dnode.is_scanned = True
-                    dnode.is_source = False
-                    try:
-                        self._is_valid()
-                    except Exception as e:
-                        self.nodes.pop()
-                        raise e
+                if isinstance(d, str):
+                    d = Path(d)
+                if d.is_absolute():
+                    d = d.relative_to(self.srcdir)
                 if d not in node.deps:
                     node.deps.append(d)
 

@@ -2,11 +2,12 @@ from pathlib import Path
 import re
 
 from lcpymake import api
-from tutorial.cpp_rules import cpp_compile, cpp_link
+from tutorial.cpp_rules import cpp_link, compile_rule
 
 
 def scan_cpp(include_path):
     def inner_scan_cpp(filename):
+        print(f'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCfilename : {filename}')
         r = re.compile("#include +\"(.*)\".*")
         ret = []
         with open(str(filename), 'r') as fin:
@@ -14,13 +15,14 @@ def scan_cpp(include_path):
                 match = re.match(r, line)
                 if match:
                     depfile = match.group(1)
+                    print(f'YYYYYYYYYYYYYYYYYY depfile : {depfile}')
                     for p in include_path:
-                        if (p / depfile).exists():
-                            ret.append(p / depfile)
-                            break
-                    else:
-                        raise Exception(f'could not resolve dep {depfile}')
-        print(ret)
+                        d: Path = p / depfile
+                        print(f'XXXXXXXXXXXXXXX  d : {d}')
+                        if not d.exists():
+                            continue
+                        ret.append(d)
+
         return ret
     return inner_scan_cpp
 
@@ -36,23 +38,32 @@ def main():
     # srcdir is the root of the sources,
     # sandbox is where the build will take place.
     srcdir = here / 'src'
-    g = api.create(srcdir=srcdir, sandbox=here / 'build-step-2')
+    sandbox = here / 'build-step-2'
+    g = api.create(srcdir=srcdir, sandbox=sandbox)
 
-    # the scanner
-    include_path = [srcdir / 'mylibs']
+    # for the scanner, and the compile command
+    include_path_scan = [srcdir / 'mylibs']
+    include_path_compile = [sandbox / 'mylibs']
 
     # add source files
     api.create_source_node(g, artefact='mylibs/foolib/foo.cpp',
-                           scan=scan_cpp(include_path))
+                           scan=scan_cpp(include_path_scan))
     api.create_source_node(g, artefact='mylibs/barlib/bar.cpp',
-                           scan=scan_cpp(include_path))
+                           scan=scan_cpp(include_path_scan))
+    api.create_source_node(g, artefact='main.cpp',
+                           scan=scan_cpp(include_path_scan))
 
     # add built files
     api.create_built_node(g, artefacts=['mylibs/foolib/foo.o'],
-                          sources=['mylibs/foolib/foo.cpp'], rule=cpp_compile)
+                          sources=['mylibs/foolib/foo.cpp'],
+                          rule=compile_rule(include_path_compile))
     api.create_built_node(g, artefacts=['mylibs/foolib/bar.o'],
-                          sources=['mylibs/barlib/bar.cpp'], rule=cpp_compile)
+                          sources=['mylibs/barlib/bar.cpp'],
+                          rule=compile_rule(include_path_compile))
+    api.create_built_node(g, artefacts=['main.o'],
+                          sources=['main.cpp'], rule=compile_rule(include_path_compile))
+
     api.create_built_node(g, artefacts=['hello'], sources=[
-                          'mylibs/foolib/foo.o', 'mylibs/foolib/bar.o'], rule=cpp_link)
+                          'mylibs/foolib/foo.o', 'mylibs/foolib/bar.o', 'main.o'], rule=cpp_link)
 
     return g
