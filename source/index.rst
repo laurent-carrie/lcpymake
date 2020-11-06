@@ -12,6 +12,7 @@ Bonjour
 
    introduction
    overview
+   tutorial
    variability
 
 

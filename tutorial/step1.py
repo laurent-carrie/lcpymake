@@ -17,9 +17,6 @@ def do_nothing_rule():
     return api.Rule(info, run)
 
 
-rule_1: api.Rule = do_nothing_rule()
-
-
 def main():
 
     # step 1 : we declare a build graph, using nodes and explicit rules
@@ -39,20 +36,12 @@ def main():
 
     # add built files
     api.create_built_node(
-        g, artefacts=['mylibs/foolib/foo.o'], sources=['mylibs/foolib/foo.cpp'], rule=rule_1)
+        g, artefacts=['mylibs/foolib/foo.o'], sources=['mylibs/foolib/foo.cpp'],
+        rule=do_nothing_rule())
     api.create_built_node(
-        g, artefacts=['mylibs/barlib/bar.o'], sources=['mylibs/barlib/bar.cpp'], rule=rule_1)
+        g, artefacts=['mylibs/barlib/bar.o'], sources=['mylibs/barlib/bar.cpp'],
+        rule=do_nothing_rule())
     api.create_built_node(g, artefacts=['hello'], sources=[
-                          'mylibs/foolib/foo.o', 'mylibs/barlib/bar.o'], rule=rule_1)
-
-    # print the graph
-    # green are the source files
-    # red are source files that don't exist (error !)
-    # blue are built files
-    # api.gprint(g)
+                          'mylibs/foolib/foo.o', 'mylibs/barlib/bar.o'], rule=do_nothing_rule())
 
     return g
-
-
-if __name__ == '__main__':
-    main()

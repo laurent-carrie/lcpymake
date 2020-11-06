@@ -1,6 +1,6 @@
-========
-overview
-========
+==============
+usage overview
+==============
 
 This is a python module, once installed it provides :
 * a python module, that you use to build your graph

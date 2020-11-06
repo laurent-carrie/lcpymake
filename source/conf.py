@@ -114,7 +114,7 @@ html_theme_options = {
     'jumbotron_use_geopattern': True,
     'nosidebar': True,
     'navbar_icon': 'music',
-    'home_name': 'test de python / sql'
+    'home_name': 'yet another build'
 }
 
 latex_engine = 'pdflatex'

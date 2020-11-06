@@ -27,17 +27,31 @@ some ideas from omake :
 * hash the artefacts. Depend on the digest of the dependencies, not on their date. This will avoid running unnecessary commands
 * define scanners. Make provides make depends, but this is difficult
 * allow :ref:`variability`
+* provide a clear separation between source and build directory. We will call them `srcdir` and `sandbox`. The mount
+  command will copy the source files from `srcdir` to `sandbox`.
+* when executing a rule, check that the target that it is supposed to create is actually created. make does not do it,
+  which is error prone
+* being able to modelize rules that have more than one generated artefact. For instance, a code generator may generate
+  a bunch of `.cpp` and `.h` files.
+* being able to modelize a dependency towards other artefacts. For instance, if a target is generated with a code genearator,
+  the code generator should be generated first
+* minimum run : if the digest of a file does not change, do not propagate the build. For instance, if you add a comment
+  in a `.cpp` file, this will trigger the compilation of the `.o`, but **not** a new link, because the `.o` will be the
+  same as before.
+
 
 some other ideas :
 ------------------
 
 * makefile are hard to write. This is why implicit rules are created, but then they are hard to customize. For instance,
-if different .o files need different rules to built, that will be hard to code.
+  if different .o files need different rules to built, that will be hard to code.
 * here the build graph is captured with a python script, which is very easy.
 * makefile variations are hard to write. ( rule or target that depends on targets )
 
 
-caveats :
----------
+what it does not do :
+---------------------
 
+* it provides full support for all of kind of compilers, shared library or dll. This tool just builds the graph,
+  you have to write yourself the build rules. So if you write a big C++ program you should use autotools or omake
 * multithreaded build ( omake -j ) is not implemented (yet?). This would make build much faster.
