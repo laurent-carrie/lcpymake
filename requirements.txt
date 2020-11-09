@@ -27,7 +27,7 @@ isort==5.6.4
 Jinja2==2.11.2
 kiwisolver==1.2.0
 lazy-object-proxy==1.4.3
--e git+git@github.com:laurent-carrie/lcpymake.git@ba2fce20b7af0c8a1f8e6e6957d8f16c853433ec#egg=lcpymake
+-e git+git@github.com:laurent-carrie/lcpymake.git@df273a9752463b17ff2c7a316a96f83707ecf437#egg=lcpymake
 lockfile==0.12.2
 MarkupSafe==1.1.1
 matplotlib==3.3.2
