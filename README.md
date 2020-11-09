@@ -55,6 +55,6 @@ some other ideas :
 what it does not do :
 ---------------------
 
-* it provides full support for all of kind of compilers, shared library or dll. This tool just builds the graph,
+* it does **not** provide any support for all of kind of compilers, shared library or dll. This tool just builds the graph,
   you have to write yourself the build rules. So if you write a big C++ program you should use autotools or omake
 * multithreaded build ( omake -j ) is not implemented (yet?). This would make build much faster.
