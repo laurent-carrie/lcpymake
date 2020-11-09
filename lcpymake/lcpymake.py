@@ -3,7 +3,7 @@ from pathlib import Path
 # pylint:disable=E0401
 import click
 # pylint:enable=E0401
-
+import lcpymake.base
 from lcpymake import model
 
 # pylint:disable=W0122
@@ -20,7 +20,9 @@ from lcpymake import model
               help='mount source files into sandbox')
 @click.option('--build', 'build_', required=False, default=False, is_flag=True,
               help='run a build')
-def main(script, print_, build_, mount_):
+@click.option('--no-color', 'nocolor_', required=False, default=False, is_flag=True,
+              help='print graph without color (useful when redirecting to a file)')
+def main(script, print_, build_, mount_, nocolor_):
     print(f'hello world {script}')
     sys.path.append(str(Path(script).absolute().parent))
     exec(f"from {str(Path(script).with_suffix('').name)} import main as client_main")
@@ -43,7 +45,7 @@ def main(script, print_, build_, mount_):
 
     if print_:
         g._scan()
-        g._print()
+        g._print(nocolor_)
 
     if mount_:
         g._mount(allow_missing=True)
@@ -52,6 +54,6 @@ def main(script, print_, build_, mount_):
         try:
             g._mount(allow_missing=False)
             g._build()
-        except (model.SourceFileMissing, model.RuleFailed) as e:
+        except (lcpymake.base.SourceFileMissing, lcpymake.base.RuleFailed) as e:
             click.echo(click.style(str(type(e)), bg='red', fg='black'))
             click.echo(click.style(str(e), bg='red', fg='black'))

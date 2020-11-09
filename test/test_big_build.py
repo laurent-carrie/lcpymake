@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 import subprocess
 
+import lcpymake.base
 from lcpymake import api
 
 compile_counter = 0
@@ -31,7 +32,7 @@ def compile_rule(choice):
         print(p.args)
         return p.returncode == 0
 
-    return api.Rule(info, run)
+    return lcpymake.base.Rule(info, run)
 
 
 def scan_cpp(filename):
@@ -45,9 +46,9 @@ def scan_cpp(filename):
     return ret
 
 
-cpp_compile: api.Rule = compile_rule('ok')
-cpp_compile_bad_target: api.Rule = compile_rule('bad target')
-cpp_compile_bad_command: api.Rule = compile_rule('bad command')
+cpp_compile: lcpymake.base.Rule = compile_rule('ok')
+cpp_compile_bad_target: lcpymake.base.Rule = compile_rule('bad target')
+cpp_compile_bad_command: lcpymake.base.Rule = compile_rule('bad command')
 
 link_counter = 0
 
@@ -68,10 +69,10 @@ def link_rule():
             args=command(sources, targets), check=True)
         return p.returncode == 0
 
-    return api.Rule(info, run)
+    return lcpymake.base.Rule(info, run)
 
 
-cpp_link: api.Rule = link_rule()
+cpp_link: lcpymake.base.Rule = link_rule()
 
 
 # pylint:disable=R0201
@@ -115,5 +116,5 @@ class TestBuild:
         api.create_built_node(g, artefacts=['main.o'], sources=[
                               'main.cpp'], rule=compile_rule('ok'))
         api.scan_artefacts(g)
-        api.gprint(g)
+        api.gprint(g, nocolor=False)
         api.build(g)

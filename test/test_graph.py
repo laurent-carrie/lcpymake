@@ -2,6 +2,7 @@ from pathlib import Path
 # pylint:disable=E0401
 import pytest
 # pylint:enable=E0401
+import lcpymake.base
 from lcpymake import api
 
 
@@ -14,7 +15,7 @@ def dummy():
         print(sources)
         print(targets)
 
-    return api.Rule(info=info, run=run)
+    return lcpymake.base.Rule(info=info, run=run)
 
 
 dummy_rule = dummy()
@@ -69,7 +70,7 @@ class TestGraph:
                'status': 'BUILT_MISSING'}]
         assert api.to_json(g) == j1
 
-        with pytest.raises(api.ArtefactSeenSeveralTimes):
+        with pytest.raises(lcpymake.base.ArtefactSeenSeveralTimes):
             api.create_source_node(g, 'main.cpp', scan=None)
         assert api.to_json(g) == j1
 
@@ -79,4 +80,4 @@ class TestGraph:
         assert api.to_json(g) == j1
         print()
         print()
-        api.gprint(g)
+        api.gprint(g, nocolor=False)

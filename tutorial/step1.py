@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import lcpymake.base
 from lcpymake import api
 
 # a rule that doesn't do anything
@@ -14,7 +15,7 @@ def do_nothing_rule():
     def run(sources, targets):
         pass
 
-    return api.Rule(info, run)
+    return lcpymake.base.Rule(info, run)
 
 
 def main():

@@ -132,3 +132,5 @@ dmypy.json
 .pyre/
 /tutorial/build-step-2/
 /tutorial/build_step3/
+/tutorial/build-step-1/
+/tutorial/build-step-3/

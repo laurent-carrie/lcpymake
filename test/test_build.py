@@ -3,6 +3,7 @@ import subprocess
 # pylint:disable=E0401
 import pytest
 # pylint:enable=E0401
+import lcpymake.base
 from lcpymake import api
 
 compile_counter = 0
@@ -32,12 +33,12 @@ def compile_rule(choice):
         print(p.args)
         return p.returncode == 0
 
-    return api.Rule(info, run)
+    return lcpymake.base.Rule(info, run)
 
 
-cpp_compile: api.Rule = compile_rule('ok')
-cpp_compile_bad_target: api.Rule = compile_rule('bad target')
-cpp_compile_bad_command: api.Rule = compile_rule('bad command')
+cpp_compile: lcpymake.base.Rule = compile_rule('ok')
+cpp_compile_bad_target: lcpymake.base.Rule = compile_rule('bad target')
+cpp_compile_bad_command: lcpymake.base.Rule = compile_rule('bad command')
 
 
 link_counter = 0
@@ -59,10 +60,10 @@ def link_rule():
             args=command(sources, targets), check=True)
         return p.returncode == 0
 
-    return api.Rule(info, run)
+    return lcpymake.base.Rule(info, run)
 
 
-cpp_link: api.Rule = link_rule()
+cpp_link: lcpymake.base.Rule = link_rule()
 
 
 # pylint:disable=R0201
@@ -116,7 +117,7 @@ class TestBuild:
                'status': 'BUILT_MISSING'}]
         assert api.to_json(g) == j1
         print()
-        api.gprint(g)
+        api.gprint(g, nocolor=False)
         # pylint:disable=W0603
         global compile_counter
         # pylint:enable=W0603
@@ -189,8 +190,8 @@ class TestBuild:
         api.create_built_node(g, artefacts=['foo.o'], sources=[
             'foo.cpp'], rule=cpp_compile_bad_target)
         print()
-        api.gprint(g)
-        with pytest.raises(api.TargetArtefactNotBuilt):
+        api.gprint(g, nocolor=False)
+        with pytest.raises(lcpymake.base.TargetArtefactNotBuilt):
             api.build(g)
 
     def test_build_rule_fails(self, datadir):
@@ -199,6 +200,6 @@ class TestBuild:
         api.create_built_node(g, artefacts=['foo.o'], sources=[
             'foo.cpp'], rule=cpp_compile_bad_command)
         print()
-        api.gprint(g)
-        with pytest.raises(api.RuleFailed):
+        api.gprint(g, nocolor=False)
+        with pytest.raises(lcpymake.base.RuleFailed):
             api.build(g)

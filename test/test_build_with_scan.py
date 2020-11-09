@@ -1,6 +1,7 @@
 from pathlib import Path
 import subprocess
 
+import lcpymake.base
 from lcpymake import api
 
 
@@ -16,10 +17,10 @@ def compile_rule():
             args=command(sources, targets), check=True)
         return p.returncode == 0
 
-    return api.Rule(info, run)
+    return lcpymake.base.Rule(info, run)
 
 
-cpp_compile: api.Rule = compile_rule()
+cpp_compile: lcpymake.base.Rule = compile_rule()
 
 
 def link_rule():
@@ -34,10 +35,10 @@ def link_rule():
             args=command(sources, targets), check=True)
         return p.returncode == 0
 
-    return api.Rule(info, run)
+    return lcpymake.base.Rule(info, run)
 
 
-cpp_link: api.Rule = link_rule()
+cpp_link: lcpymake.base.Rule = link_rule()
 
 
 def scan_cpp(f):
@@ -96,10 +97,10 @@ class TestBuildWithScan:
                'status': 'BUILT_MISSING'}]
         assert api.to_json(g) == j1
         print()
-        api.gprint(g)
+        api.gprint(g, nocolor=False)
         api.scan_artefacts(g)
         print('====== after scan')
-        api.gprint(g)
+        api.gprint(g, nocolor=False)
         j2 = [{'artefacts': ['foo.cpp'], 'scanned_deps': [], 'status': 'SOURCE_PRESENT'},
               {'artefacts': ['bar.cpp'], 'scanned_deps': [], 'status': 'SOURCE_PRESENT'},
               {'artefacts': ['main.cpp'],

@@ -35,7 +35,7 @@ def main():
     # srcdir is the root of the sources,
     # sandbox is where the build will take place.
     srcdir = here / 'src'
-    sandbox = here / 'build-step-2'
+    sandbox = here / 'build-step-3'
     g = api.create(srcdir=srcdir, sandbox=sandbox)
 
     # for the scanner, and the compile command
@@ -62,5 +62,7 @@ def main():
 
     api.create_built_node(g, artefacts=['hello'], sources=[
                           'mylibs/foolib/foo.o', 'mylibs/foolib/bar.o', 'main.o'], rule=cpp_link)
+
+    # api.update_color_map(g,{"SOURCE_PRESENT": {"fg": 'White',"bg":"Red"}})
 
     return g

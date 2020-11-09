@@ -3,14 +3,13 @@ from pathlib import Path
 
 from lcpymake.model import World
 # pylint:disable=W0611
-from lcpymake.model import ArtefactSeenSeveralTimes
-from lcpymake.model import CannotAddARuleForASourceNode
-from lcpymake.model import NodeAlreadyHasARule
-from lcpymake.model import NoSuchNode
-from lcpymake.model import TargetArtefactNotBuilt
-from lcpymake.model import RuleFailed
-from lcpymake.model import Rule
+from lcpymake.base import NoSuchNode, Rule
+from lcpymake.base import RuleFailed, TargetArtefactNotBuilt, NodeAlreadyHasARule, \
+    CannotAddARuleForASourceNode, \
+    ArtefactSeenSeveralTimes
 # pylint:enable=W0611
+
+from lcpymake.colored import color_map
 
 # pylint:disable=W0212
 
@@ -40,8 +39,8 @@ def is_valid(world):
     return world._is_valid()
 
 
-def gprint(world):
-    world._print()
+def gprint(world, nocolor):
+    world._print(nocolor)
 
 
 def scan_artefacts(world):
@@ -54,3 +53,7 @@ def add_automatic_rule(world, from_suffix: str, to_suffix: str, rule: Rule):
 
 def build(world):
     return world._build()
+
+
+def update_color_map(_, d):
+    color_map.update(d)

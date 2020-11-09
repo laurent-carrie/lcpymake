@@ -1,172 +1,16 @@
 import json
-from enum import Enum
 from pathlib import Path
-from typing import List, Tuple, Set, Callable
+from typing import List, Set, Callable
 import collections
-import hashlib
+
+from lcpymake.base import Node, NodeStatus, RuleFailed, TargetArtefactNotBuilt, SourceFileMissing, \
+    ArtefactSeenSeveralTimes
+from lcpymake.colored import colored_string
+from lcpymake.base import NoSuchNode
 
 # pylint:disable=E0401
 # don't know why pylint complains about termcolor
-from termcolor import colored
 # pylint:enable=E0401
-
-
-class ArtefactSeenSeveralTimes(Exception):
-    def __init__(self, message):
-        Exception.__init__(self, message)
-
-
-class NoSuchNode(Exception):
-    def __init__(self, filename):
-        Exception.__init__(self, f'{filename}')
-
-
-class CannotAddARuleForASourceNode(Exception):
-    def __init__(self):
-        Exception.__init__(self)
-
-
-class NodeAlreadyHasARule(Exception):
-    def __init__(self):
-        Exception.__init__(self)
-
-
-class SourceFileMissing(Exception):
-    def __init__(self, filename):
-        Exception.__init__(self, f'source file missing : {filename}')
-        self.filename = filename
-
-
-class TargetArtefactNotBuilt(Exception):
-    def __init__(self, filename):
-        Exception.__init__(self, f'artefact was not built for : {filename}')
-        self.filename = filename
-
-
-class RuleFailed(Exception):
-    def __init__(self, filename, msg):
-        Exception.__init__(self, f'build failed for  : {filename} ; message is : {msg}')
-        self.filename = filename
-        self.msg = msg
-
-
-class Rule:
-    def __init__(self, info: Callable[[List[str], List[str]], str],
-                 run: Callable[[List[str], List[str]], bool]):
-        self.info = info
-        self.run = run
-
-
-class NodeStatus(Enum):
-    SOURCE_PRESENT = 1
-    SOURCE_MISSING = 2
-    BUILT_PRESENT = 3
-    BUILT_MISSING = 4
-    NEEDS_REBUILT = 5
-    SCANNED_PRESENT_DEP = 6
-    SCANNED_MISSING_DEP = 7
-
-
-class Node:
-    node_id: int
-    artefacts: List[Tuple[str, Path]]
-    sources: List[Tuple[str, 'Path']]
-    rule: str
-
-    def __init__(self, srcdir, sandbox, artefacts, sources, rule, scan):
-        self.srcdir = srcdir
-        self.sandbox = sandbox
-        self.artefacts = artefacts
-        self.is_source = None
-        self.is_scanned = None
-        self.deps_in_srcdir = []
-        self.ok_build = None
-        if sources is None:
-            self.sources = []
-        else:
-            self.sources = sources
-        if len(sources) == 0:
-            self.rule = None
-            self.rule_info = None
-        else:
-            if rule is None:
-                raise ValueError('rule not defined')
-            self.rule = rule
-            not_qualified_sources = [Path(s) for (_, s) in self.sources]
-            not_qualified_artefacts = [Path(s) for (_, s) in self.artefacts]
-            self.rule_info = rule.info(
-                sources=not_qualified_sources, targets=not_qualified_artefacts)
-        self.scan = scan
-
-    def deps_hash_hex(self):
-        if self.is_source or self.is_scanned:
-            raise Exception('implementation error')
-        node_hash = hashlib.sha256()
-        node_hash.update(str.encode(self.rule_info))
-        for (_, s) in self.artefacts:
-            f: Path = self.sandbox / s
-            if f.exists():
-                node_hash.update(f.read_bytes())
-            else:
-                return None
-        for (_, s) in self.sources:
-            f: Path = self.sandbox / s
-            if f.exists():
-                node_hash.update(f.read_bytes())
-            else:
-                return None
-        for s in self.deps_in_srcdir:
-            f: Path = self.sandbox / s
-            if f.exists():
-                node_hash.update(f.read_bytes())
-            else:
-                return None
-        return node_hash.hexdigest()
-
-    def run(self):
-        sources = [self.sandbox / f for (_, f) in self.sources]
-        artefacts = [self.sandbox / f for (_, f) in self.artefacts]
-        try:
-            success = self.rule.run(sources=sources, targets=artefacts)
-            return success
-        except Exception as e:
-            raise RuleFailed(self.rule_info, e) from e
-
-    @property
-    def label(self):
-        not_qualified_artefacts = [str(s) for (_, s) in self.artefacts]
-        return ';'.join(not_qualified_artefacts)
-
-    def to_json(self):
-        world = {'artefacts': [str(p) for (_, p) in self.artefacts]}
-        world.update({'status': self.status.name})
-        if not self.is_source and not self.is_scanned:
-            world.update({'sources': [str(p) for (_, p) in self.sources]})
-            world.update({'rule': self.rule_info})
-        if self.is_source:
-            world.update({'scanned_deps': [str(p) for p in self.deps_in_srcdir]})
-        if not (self.is_source or self.is_scanned):
-            world.update({'digest': self.deps_hash_hex()})
-            world.update({'ok_build': self.ok_build})
-
-        return world
-
-    @property
-    def status(self):
-
-        if self.is_scanned:
-            return NodeStatus.SCANNED_PRESENT_DEP
-
-        if self.is_source:
-            if {(self.srcdir / s).exists() for (_, s) in self.artefacts} == {True}:
-                return NodeStatus.SOURCE_PRESENT
-            return NodeStatus.SOURCE_MISSING
-
-        if {(self.sandbox / s).exists() for (_, s) in self.artefacts} == {True}:
-            if self.ok_build is not None and (self.ok_build == self.deps_hash_hex()):
-                return NodeStatus.BUILT_PRESENT
-            return NodeStatus.NEEDS_REBUILT
-        return NodeStatus.BUILT_MISSING
 
 
 class World:
@@ -258,33 +102,18 @@ class World:
     def _leaf_nodes(self) -> Set[Node]:
         return {self._find_node(artefact) for artefact in self._leaf_artefacts()}
 
-    def _print(self):
+    def _print(self, nocolor):
         def print_tree(indent, node):
-            status = node.status
-            if status == NodeStatus.SOURCE_PRESENT:
-                # text = colored(node, 'red', attrs=['reverse', 'blink'])
-                line1 = colored(node.label, 'green', attrs=[]) + ' (source)'
-            elif status == NodeStatus.SOURCE_MISSING:
-                line1 = colored(node.label, 'red', attrs=[
-                                'reverse']) + ' (missing source)'
-            elif status == NodeStatus.BUILT_PRESENT:
-                line1 = colored(node.label, 'blue', attrs=[]) + ' (built present)'
-            elif status == NodeStatus.SCANNED_PRESENT_DEP:
-                line1 = colored(node.label, 'cyan', attrs=[]) + ' (scanned present)'
-            elif status == NodeStatus.BUILT_MISSING:
-                line1 = colored(node.label, 'blue', attrs=[
-                                'reverse']) + ' (built missing)'
-            elif status == NodeStatus.NEEDS_REBUILT:
-                line1 = colored(node.label, 'red', attrs=[]) + ' (built not up to date)'
-            else:
-                raise Exception('internal error')
-            print(f"{'...'*indent}{line1}")
+            # status = node.status
+            text = f"{'...' * indent}{node.label}"
+            print(f'{colored_string(choice=node.status.name, text=text,nocolor=nocolor)}')
             if not node.is_source:
-                print(f"{'...'*(indent+1)}rule : {node.rule_info}")
+                text = f"{'...' * (indent + 1)}{node.rule_info}"
+                print(f"{colored_string(choice='RULE',text=text,nocolor=nocolor)}")
             else:
                 for fdep in node.deps_in_srcdir:
-                    line = colored(fdep, 'yellow', attrs=[]) + ' (scanned)'
-                    print(f"{'...' * (indent + 1)}{line}")
+                    text = f"{'...' * (indent + 1)}{fdep}"
+                    print(f"{colored_string(choice='DEP', text=text,nocolor=nocolor)}")
 
             for (_, source) in node.sources:
                 source_node = self._find_node(source)
