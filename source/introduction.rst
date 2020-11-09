@@ -1,6 +1,3 @@
-the full doc is written with sphix.
-to read it, git clone the package, and run `sphinx-build -M html source build`
-
 ============
 Introduction
 ============

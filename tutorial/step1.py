@@ -1,11 +1,20 @@
-from lcpymake import base
 from pathlib import Path
 
+from lcpymake import api
+
 # a rule that doesn't do anything
+# pylint:disable=W0613
 
 
-def dnr(sources, targets):
-    return base.Rule('do nothing rule', lambda: None)
+def do_nothing_rule():
+
+    def info(sources, targets):
+        return 'do nothing'
+
+    def run(sources, targets):
+        pass
+
+    return api.Rule(info, run)
 
 
 def main():
@@ -16,35 +25,23 @@ def main():
     here = Path(__file__).parent
 
     # a build graph.
-    # sourcedir is the root of the sources,
+    # srcdir is the root of the sources,
     # sandbox is where the build will take place.
-    g = base.Graph(sourcedir=here / 'src', sandbox=here / 'build-step-1')
+    g = api.create(srcdir=here / 'src', sandbox=here / 'build-step-1')
 
     # add source files
-    g.add_source_node('foo.cpp')
-    g.add_source_node('bar.cpp')
-    g.add_source_node('missing-foo.cpp')
+    api.create_source_node(g, artefact='mylibs/foolib/foo.cpp', scan=None)
+    api.create_source_node(g, artefact='mylibs/barlib/bar.cpp', scan=None)
+    api.create_source_node(g, artefact='missing-foo.cpp', scan=None)
 
     # add built files
-    g.add_built_node('foo.o')
-    g.add_built_node('bar.o')
-    g.add_built_node('hello')
+    api.create_built_node(
+        g, artefacts=['mylibs/foolib/foo.o'], sources=['mylibs/foolib/foo.cpp'],
+        rule=do_nothing_rule())
+    api.create_built_node(
+        g, artefacts=['mylibs/barlib/bar.o'], sources=['mylibs/barlib/bar.cpp'],
+        rule=do_nothing_rule())
+    api.create_built_node(g, artefacts=['hello'], sources=[
+                          'mylibs/foolib/foo.o', 'mylibs/barlib/bar.o'], rule=do_nothing_rule())
 
-    # print the graph
-    # green are the source files
-    # red are source files that don't exist (error !)
-    # blue are built files
-    g.print()
-
-    # add explicit rules. For now, there is no code in the rule
-    # it is just to build the graph
-    g.add_explicit_rule(sources=['bar.cpp'], targets=['bar.o'], rule=dnr)
-    g.add_explicit_rule(sources=['foo.cpp'], targets=['foo.o'], rule=dnr)
-    g.add_explicit_rule(sources=['foo.o', 'bar.o'], targets=['hello'], rule=dnr)
-
-    print('\n\n\n\n\ngraph after adding rules')
-    g.print()
-
-
-if __name__ == '__main__':
-    main()
+    return g

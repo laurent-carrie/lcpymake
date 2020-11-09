@@ -1,5 +1,5 @@
 #include <iostream>
-#include "foo.h"
+#include "foolib/foo.h"
 
 int foo(int i) {
     return i ;
