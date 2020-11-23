@@ -3,8 +3,8 @@ from pathlib import Path
 # pylint:disable=E0401
 import click
 # pylint:enable=E0401
-import lcpymake.base
-from lcpymake import model
+from lcpymake import model, base
+from lcpymake.gui import main as main_gui
 
 # pylint:disable=W0122
 # pylint:disable=W0123
@@ -22,14 +22,16 @@ from lcpymake import model
               help='run a build')
 @click.option('--no-color', 'nocolor_', required=False, default=False, is_flag=True,
               help='print graph without color (useful when redirecting to a file)')
-def main(script, print_, build_, mount_, nocolor_):
+@click.option('--gui', required=False, default=False, is_flag=True,
+              help='run interactive gui (requires curses)')
+def main(script, print_, build_, mount_, nocolor_, gui):
     print(f'hello world {script}')
     sys.path.append(str(Path(script).absolute().parent))
     exec(f"from {str(Path(script).with_suffix('').name)} import main as client_main")
 
     try:
-        g: model.World = eval('client_main()')
-    except (model.NoSuchNode) as e:
+        g = eval('client_main()')
+    except (base.NoSuchNode) as e:
         click.echo(click.style(str(type(e)), bg='red', fg='black'))
         click.echo(click.style(str(e), bg='red', fg='black'))
         sys.exit(1)
@@ -37,6 +39,10 @@ def main(script, print_, build_, mount_, nocolor_):
     if not isinstance(g, model.World):
         raise ValueError(
             f'user function main does not return the expected type, it returns {type(g)}')
+
+    if gui:
+        main_gui(g)
+        exit(0)
 
     click.echo('srcdir  : ', nl=False)
     click.echo(click.style(str(g.srcdir), bg='blue', fg='white'))
@@ -54,6 +60,6 @@ def main(script, print_, build_, mount_, nocolor_):
         try:
             g._mount(allow_missing=False)
             g._build()
-        except (lcpymake.base.SourceFileMissing, lcpymake.base.RuleFailed) as e:
+        except (base.SourceFileMissing, base.RuleFailed) as e:
             click.echo(click.style(str(type(e)), bg='red', fg='black'))
             click.echo(click.style(str(e), bg='red', fg='black'))
