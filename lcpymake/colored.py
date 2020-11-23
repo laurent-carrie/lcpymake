@@ -27,7 +27,7 @@ color_map = {
     'SOURCE_PRESENT': {'fg': 'LightGreen'},
     'SOURCE_MISSING': {'fg': 'Red', 'bg': 'White'},
     'BUILT_MISSING': {'fg': 'LightSkyBlue1'},
-    'NEEDS_REBUILT': {'fg': 'Purple', 'bold': True},
+    'NEEDS_REBUILD': {'fg': 'Purple', 'bold': True},
     'RULE': {'fg': 'Grey'},
     'DEP': {'fg': 'IndianRed'}
 }

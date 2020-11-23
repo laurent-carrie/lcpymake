@@ -2,15 +2,11 @@ import hashlib
 from enum import Enum
 from pathlib import Path
 from typing import List, Tuple, Callable
+from lcpymake import logger
 
 
 class Node:
-    node_id: int
-    artefacts: List[Tuple[str, Path]]
-    sources: List[Tuple[str, 'Path']]
-    rule: str
-
-    def __init__(self, srcdir, sandbox, artefacts, sources, rule, scan):
+    def __init__(self, srcdir, sandbox, artefacts, sources, rule, scan, get_node):
         self.srcdir = srcdir
         self.sandbox = sandbox
         self.artefacts = artefacts
@@ -18,6 +14,9 @@ class Node:
         self.is_scanned = None
         self.deps_in_srcdir = []
         self.ok_build = None
+        self.get_node = get_node
+
+        self.stored_digest = None
         if sources is None:
             self.sources = []
         else:
@@ -35,30 +34,64 @@ class Node:
                 sources=not_qualified_sources, targets=not_qualified_artefacts)
         self.scan = scan
 
-    def deps_hash_hex(self):
-        if self.is_source or self.is_scanned:
-            raise Exception('implementation error')
+    def deps_hash_hex_of_source_node(self):
+        logger.info(f"compute digest of {self.label}")
         node_hash = hashlib.sha256()
-        node_hash.update(str.encode(self.rule_info))
         for (_, s) in self.artefacts:
-            f: Path = self.sandbox / s
-            if f.exists():
-                node_hash.update(f.read_bytes())
-            else:
-                return None
-        for (_, s) in self.sources:
+            logger.info(f"consider {s}")
             f: Path = self.sandbox / s
             if f.exists():
                 node_hash.update(f.read_bytes())
             else:
                 return None
         for s in self.deps_in_srcdir:
+            logger.info(f"consider {s}")
             f: Path = self.sandbox / s
             if f.exists():
                 node_hash.update(f.read_bytes())
             else:
                 return None
+
         return node_hash.hexdigest()
+
+    def deps_hash_hex_of_built_node(self):
+        logger.info(f"compute digest of {self.label}")
+        if self.is_source or self.is_scanned:
+            raise Exception('implementation error')
+        node_hash = hashlib.sha256()
+        node_hash.update(str.encode(self.rule_info))
+        if True:
+            for (_, s) in self.artefacts:
+                f: Path = self.sandbox / s
+                if f.exists():
+                    node_hash.update(f.read_bytes())
+                else:
+                    return None
+        for (_, s) in self.sources:
+            node: Node = self.get_node(s)
+            logger.info(f"inspect {node.label}")
+            for (_, s2) in node.artefacts:
+                f: Path = self.sandbox / s2
+                logger.info(f"inspect artefact {f}")
+                if f.exists():
+                    node_hash.update(f.read_bytes())
+                else:
+                    return None
+            for dep in node.deps_in_srcdir:
+                f: Path = self.sandbox / dep
+                logger.info(f"inspect dep {f}")
+                if f.exists():
+                    node_hash.update(f.read_bytes())
+                else:
+                    return None
+
+        return node_hash.hexdigest()
+
+    def deps_hash_hex(self):
+        if self.is_source:
+            return self.deps_hash_hex_of_source_node()
+        else:
+            return self.deps_hash_hex_of_built_node()
 
     def run(self):
         sources = [self.sandbox / f for (_, f) in self.sources]
@@ -102,7 +135,7 @@ class Node:
         if {(self.sandbox / s).exists() for (_, s) in self.artefacts} == {True}:
             if self.ok_build is not None and (self.ok_build == self.deps_hash_hex()):
                 return NodeStatus.BUILT_PRESENT
-            return NodeStatus.NEEDS_REBUILT
+            return NodeStatus.NEEDS_REBUILD
         return NodeStatus.BUILT_MISSING
 
 
@@ -111,7 +144,7 @@ class NodeStatus(Enum):
     SOURCE_MISSING = 2
     BUILT_PRESENT = 3
     BUILT_MISSING = 4
-    NEEDS_REBUILT = 5
+    NEEDS_REBUILD = 5
     SCANNED_PRESENT_DEP = 6
     SCANNED_MISSING_DEP = 7
 

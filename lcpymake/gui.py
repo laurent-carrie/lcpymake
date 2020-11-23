@@ -3,19 +3,22 @@ from time import sleep
 import curses
 from enum import Enum, auto
 
-from lcpymake import model
+from lcpymake import model, base, logger
 
 
 class MyColorEnum(Enum):
     RESERVED = 0
     BG = auto()
-    MISSING_SOURCE = auto()
+    RULE = auto()
     CURSOR = auto()
-
-
-class MyColor:
-    def __init__(self, index, fg, bg):
-        curses.init_pair(index, fg, bg)
+    SOURCE_PRESENT = auto()
+    SOURCE_MISSING = auto()
+    BUILT_PRESENT = auto()
+    BUILT_MISSING = auto()
+    NEEDS_REBUILD = auto()
+    SCANNED_PRESENT_DEP = auto()
+    SCANNED_MISSING_DEP = auto()
+    DIGEST = auto()
 
 
 MyColors = {}
@@ -31,9 +34,17 @@ def init_colors(stdscr):
 
 
 def set_my_colors():
-    curses.init_pair(MyColorEnum.BG.value, -1, 44)
-    curses.init_pair(MyColorEnum.MISSING_SOURCE.value, 23, -1)
+    bg = 115
+    curses.init_pair(MyColorEnum.BG.value, -1, bg)
+    curses.init_pair(MyColorEnum.SOURCE_PRESENT.value, 100, bg)
+    curses.init_pair(MyColorEnum.SOURCE_MISSING.value, 23, bg)
+    curses.init_pair(MyColorEnum.BUILT_PRESENT.value, 23, bg)
+    curses.init_pair(MyColorEnum.SCANNED_MISSING_DEP.value, 216, bg)
+    curses.init_pair(MyColorEnum.SCANNED_PRESENT_DEP.value, 180, bg)
+    curses.init_pair(MyColorEnum.RULE.value, 23, bg)
     curses.init_pair(MyColorEnum.CURSOR.value, 20, 200)
+    curses.init_pair(MyColorEnum.NEEDS_REBUILD.value, 165, bg)
+    curses.init_pair(MyColorEnum.DIGEST.value, 180, bg)
 
 
 def _show_colors(stdscr):
@@ -54,8 +65,10 @@ def _show_colors(stdscr):
 
 count = 0
 
-current = "none"
+current = "tree"
 hide_construction_command = False
+hide_deps = False
+hide_digest = False
 cursor_tree_offset = 0
 cursor_tree_points_to = None
 max_depth = 3
@@ -87,13 +100,33 @@ def help(screen):
         row += 1
 
 
+def scan(screen, g):
+    logger.info("scan")
+    screen.erase()
+    screen.addstr(10, 10, "scanning...")
+    screen.refresh()
+    g._scan()
+
+
+def build(screen, g):
+    screen.erase()
+    screen.addstr(10, 10, "build...")
+    screen.refresh()
+    g._build()
+
+
 def print_tree(screen, g):
+    screen.erase()
+    screen.refresh()
+    splash(screen)
+
     first_row = 5
     row = first_row
-    global hide_construction_command
+    global hide_construction_command, hide_deps
     global cursor_tree_offset
     global cursor_tree_points_to
     global max_depth
+    global hide_digest
 
     if cursor_tree_offset is None:
         cursor_tree_offset = 0
@@ -105,18 +138,35 @@ def print_tree(screen, g):
             return row
         col = 3
         # status = node.status
-        text = f"{'...' * indent}{node.label}"
-        screen.addstr(row, col, text)
+        dots = '...' * indent
+        screen.addstr(row, col, dots)
+        screen.addstr(row, col + len(dots), node.label,
+                      curses.color_pair(MyColorEnum[node.status.name].value))
+
         row += 1
         if not node.is_source and not hide_construction_command:
-            text = f"{'...' * (indent + 1)}{node.rule_info}"
-            screen.addstr(row, col, text)
+            dots = '...' * (indent + 1)
+            screen.addstr(row, col, dots)
+            screen.addstr(row, col + len(dots), node.rule_info,
+                          curses.color_pair(MyColorEnum.RULE.value))
             row += 1
-        else:
+        elif not hide_deps:
             for fdep in node.deps_in_srcdir:
-                text = f"{'...' * (indent + 1)}{fdep}"
-                screen.addstr(row, col, text)
+                dots = '...' * (indent + 1)
+                screen.addstr(row, col, dots)
+                screen.addstr(row, col + len(dots), str(fdep))
                 row += 1
+
+        if not node.is_source and not node.is_scanned and not hide_digest:
+            dots = '...' * (indent + 1)
+            screen.addstr(row, col, dots)
+            screen.addstr(row, col + len(dots), node.deps_hash_hex()
+                          or "None", curses.color_pair(MyColorEnum.DIGEST.value))
+            row += 1
+            screen.addstr(row, col, dots)
+            screen.addstr(row, col + len(dots), node.stored_digest or "None",
+                          curses.color_pair(MyColorEnum.DIGEST.value))
+            row += 1
 
         for (_, source) in node.sources:
             source_node = g._find_node(source)
@@ -131,6 +181,56 @@ def print_tree(screen, g):
     row += 1
     screen.addstr(row, 0, f"{len(g._leaf_artefacts())} leaves (source nodes)")
     screen.move(first_row + cursor_tree_offset, 0)
+    screen.addstr(first_row + cursor_tree_offset, 0, '>',
+                  curses.color_pair(MyColorEnum.CURSOR.value))
+
+    screen.refresh()
+
+
+def eval_command(screen, g):
+    global current
+    global hide_construction_command
+    global cursor_tree_offset
+    global cursor_tree_points_to
+    global max_depth
+    global hide_deps
+    global hide_digest
+    command = screen.getch()
+    screen.addstr(0, 50, str(command))
+    if command != -1:
+        if command == ord('h'):
+            current = "help"
+        elif command == ord('t'):
+            current = "tree"
+            print_tree(screen, g)
+        elif command == ord('c'):
+            hide_construction_command = not hide_construction_command
+        elif command == ord('d'):
+            hide_deps = not hide_deps
+        elif command == ord('g'):
+            hide_digest = not hide_digest
+        elif command == ord('s'):
+            current = "scan"
+            scan(screen, g)
+            print_tree(screen, g)
+            current = "tree"
+        elif command == ord('b'):
+            current = "build"
+            build(screen, g)
+            scan(screen, g)
+            print_tree(screen, g)
+        elif command == ord('-') and max_depth > 0:
+            max_depth -= 1
+        elif command == ord('+') and max_depth < 10:
+            max_depth += 1
+        elif command == curses.KEY_UP:
+            cursor_tree_offset -= 1
+        elif command == curses.KEY_DOWN:
+            cursor_tree_offset += 1
+        elif command == ord('q'):
+            exit(0)
+        else:
+            print("unknown command")
 
 
 def _main(screen, g: model.World):
@@ -139,6 +239,8 @@ def _main(screen, g: model.World):
     global cursor_tree_offset
     global cursor_tree_points_to
     global max_depth
+    global hide_deps
+    global hide_digest
 
     init_colors(screen)
     # curses.curs_set(0)  # Hide the cursor
@@ -146,47 +248,27 @@ def _main(screen, g: model.World):
     set_my_colors()
 
     while True:
-        screen.erase()
-        splash(screen)
 
         screen.addstr(1, 0, f"srcdir  : {g.srcdir}")
         screen.addstr(2, 0, f"sandbox : {g.sandbox}")
 
         info = f"max-depth:{max_depth}"
+        if hide_construction_command:
+            info = info + " c-"
+        else:
+            info = info + " c+"
+        if hide_deps:
+            info = info + " d-"
+        else:
+            info = info + " d+"
+        if hide_digest:
+            info = info + " g-"
+        else:
+            info = info + " g+"
         screen.addstr(0, 20, info)
 
-        command = screen.getch()
-        screen.addstr(0, 50, str(command))
-        if command != -1:
-            if command == ord('h'):
-                current = "help"
-            elif command == ord('t'):
-                current = "tree"
-            elif command == ord('c'):
-                hide_construction_command = not hide_construction_command
-            elif command == ord('s'):
-                g._scan()
-            elif command == ord('-') and max_depth > 0:
-                max_depth -= 1
-            elif command == ord('+') and max_depth < 10:
-                max_depth += 1
-            elif command == curses.KEY_UP:
-                cursor_tree_offset -= 1
-            elif command == curses.KEY_DOWN:
-                cursor_tree_offset += 1
-            elif command == ord('q'):
-                exit(0)
-            else:
-                print("unknown command")
+        eval_command(screen, g)
 
-        if current == 'help':
-            help(screen)
-        elif current == 'tree':
-            print_tree(screen, g)
-        else:
-            print_tree(screen, g)
-
-        screen.refresh()
         time.sleep(0.1)
 
 

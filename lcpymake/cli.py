@@ -41,6 +41,7 @@ def main(script, print_, build_, mount_, nocolor_, gui):
             f'user function main does not return the expected type, it returns {type(g)}')
 
     if gui:
+        g._scan()
         main_gui(g)
         exit(0)
 

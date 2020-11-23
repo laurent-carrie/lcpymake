@@ -54,14 +54,14 @@ def main():
     api.create_built_node(g, artefacts=['mylibs/foolib/foo.o'],
                           sources=['mylibs/foolib/foo.cpp'],
                           rule=compile_rule(include_path_compile))
-    api.create_built_node(g, artefacts=['mylibs/foolib/bar.o'],
+    api.create_built_node(g, artefacts=['mylibs/barlib/bar.o'],
                           sources=['mylibs/barlib/bar.cpp'],
                           rule=compile_rule(include_path_compile))
     api.create_built_node(g, artefacts=['main.o'],
                           sources=['main.cpp'], rule=compile_rule(include_path_compile))
 
     api.create_built_node(g, artefacts=['hello'], sources=[
-                          'mylibs/foolib/foo.o', 'mylibs/foolib/bar.o', 'main.o'], rule=cpp_link)
+                          'mylibs/foolib/foo.o', 'mylibs/barlib/bar.o', 'main.o'], rule=cpp_link)
 
     # api.update_color_map(g,{"SOURCE_PRESENT": {"fg": 'White',"bg":"Red"}})
 

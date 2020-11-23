@@ -3,6 +3,10 @@
 
 class Foo {
     Foo() {}
+	private:
+    int x_ ;
+    int y_ ;
+    int z_ ;
 } ;
 
 #endif

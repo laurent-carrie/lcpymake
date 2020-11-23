@@ -1,12 +1,16 @@
+import hashlib
 import json
 from pathlib import Path
 from typing import List, Set, Callable
 import collections
+import traceback
 
 from lcpymake.base import Node, NodeStatus, RuleFailed, TargetArtefactNotBuilt, SourceFileMissing, \
     ArtefactSeenSeveralTimes
 from lcpymake.colored import colored_string
 from lcpymake.base import NoSuchNode
+
+from lcpymake import logger
 
 # pylint:disable=E0401
 # don't know why pylint complains about termcolor
@@ -35,8 +39,8 @@ class World:
         # pylint:enable=W0120
 
     def _to_json(self):
-        self._scan()
-        self._mount(allow_missing=True)
+        #        self._scan()
+        #       self._mount(allow_missing=True)
         world_dict = [n.to_json() for n in self.nodes]
         world_dict_str = json.dumps(world_dict)
         j = json.loads(world_dict_str)
@@ -44,7 +48,7 @@ class World:
 
     def _add_source_node(self, artefact: str, scan: Callable[[str], List[str]]):
         new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
-                        artefacts=[('', artefact)], sources=[], rule=None, scan=scan)
+                        artefacts=[('', artefact)], sources=[], rule=None, scan=scan, get_node=self._find_node)
         new_node.is_scanned = False
         new_node.is_source = True
         try:
@@ -59,7 +63,8 @@ class World:
         artefacts = [('', f) for f in artefacts]
         sources = [('', f) for f in sources]
         new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
-                        artefacts=artefacts, sources=sources, rule=rule, scan=None)
+                        artefacts=artefacts, sources=sources, rule=rule, scan=None,
+                        get_node=self._find_node)
         new_node.is_scanned = False
         new_node.is_source = False
         try:
@@ -144,15 +149,15 @@ class World:
 
     def _not_built(self):
         return [node for node in self.nodes
-                if node.status in {NodeStatus.BUILT_MISSING, NodeStatus.NEEDS_REBUILT}]
+                if node.status in {NodeStatus.BUILT_MISSING, NodeStatus.NEEDS_REBUILD}]
 
     def _node_can_be_built(self, node: Node):
-        if node.status not in {NodeStatus.BUILT_MISSING, NodeStatus.NEEDS_REBUILT}:
+        if node.status not in {NodeStatus.BUILT_MISSING, NodeStatus.NEEDS_REBUILD}:
             return False
         for (_, source) in node.sources:
             node_source = self._find_node(source)
             if node_source.status in {NodeStatus.BUILT_MISSING, NodeStatus.SOURCE_MISSING,
-                                      NodeStatus.NEEDS_REBUILT}:
+                                      NodeStatus.NEEDS_REBUILD}:
                 return False
             if node_source.status in {NodeStatus.BUILT_PRESENT, NodeStatus.SOURCE_PRESENT}:
                 continue
@@ -178,10 +183,12 @@ class World:
                 raise TargetArtefactNotBuilt(a)
 
     def _build(self):
+        logger.info("build")
         self._scan()
         self._mount(allow_missing=False)
 
         while True:
+            logger.info("==== build iter")
             before = len(self._not_built())
             for node in self._can_be_built():
                 if (node.ok_build is not None) and node.ok_build == node.deps_hash_hex():
@@ -201,8 +208,11 @@ class World:
                 return False
 
     def _scan(self):
+        logger.info("scan")
         self._mount(allow_missing=True)
         for node in self.nodes:
+            node.stored_digest = None
+
             if node.status != NodeStatus.SOURCE_PRESENT:
                 continue
             (_, f) = node.artefacts[0]
@@ -215,6 +225,27 @@ class World:
                 if d not in node.deps_in_srcdir:
                     node.deps_in_srcdir.append(d)
 
+        if self.json_path().exists():
+            try:
+                with open(str(self.json_path()), 'r') as fin:
+                    j = json.load(fin)
+                    assert(type(j) == list)
+                    for item in j:
+                        node = self._find_node(item["artefacts"][0])
+                        if node is None:
+                            logger.warn(f"node not found {item['artefacts'][0]}")
+                        elif not node.is_source and not node.is_scanned:
+                            if not item.get("digest"):
+                                logger.warn(f"no digest for node {node.label}")
+                            else:
+                                node.stored_digest = item["digest"]
+            except Exception as e:
+                logger.error(e)
+                logger.error(traceback.format_exc())
+
+    def json_path(self) -> Path:
+        return self.sandbox / 'lcpymake.json'
+
     def _stamp(self):
-        with open((self.sandbox) / 'lcpymake.json', 'w') as fin:
-            json.dump(self._to_json(), fin)
+        with open(str(self.json_path()), 'w') as fout:
+            json.dump(self._to_json(), fout)

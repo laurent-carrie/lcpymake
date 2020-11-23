@@ -49,7 +49,7 @@ class TestGraph:
                'ok_build': None,
                'rule': "build target ['foo.o'] from sources ['foo.cpp']",
                'sources': ['foo.cpp'],
-               'status': 'NEEDS_REBUILT'},
+               'status': 'NEEDS_REBUILD'},
               {'artefacts': ['bar.o'],
                'digest': None,
                'ok_build': None,
