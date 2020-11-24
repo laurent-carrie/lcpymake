@@ -24,6 +24,7 @@ def rgb_of_color_name(name: str) -> str:
 
 
 color_map = {
+    'BUILD_UP_TO_DATE': {'fg': 'Green'},
     'SOURCE_PRESENT': {'fg': 'LightGreen'},
     'SOURCE_MISSING': {'fg': 'Red', 'bg': 'White'},
     'BUILT_MISSING': {'fg': 'LightSkyBlue1'},

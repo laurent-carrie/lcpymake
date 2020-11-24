@@ -1,5 +1,5 @@
 import hashlib
-from enum import Enum
+from enum import Enum, auto
 from pathlib import Path
 from typing import List, Tuple, Callable
 from lcpymake import logger
@@ -13,7 +13,6 @@ class Node:
         self.is_source = None
         self.is_scanned = None
         self.deps_in_srcdir = []
-        self.ok_build = None
         self.get_node = get_node
 
         self.stored_digest = None
@@ -38,14 +37,14 @@ class Node:
         logger.info(f"compute digest of {self.label}")
         node_hash = hashlib.sha256()
         for (_, s) in self.artefacts:
-            logger.info(f"consider {s}")
+            # logger.info(f"consider {s}")
             f: Path = self.sandbox / s
             if f.exists():
                 node_hash.update(f.read_bytes())
             else:
                 return None
         for s in self.deps_in_srcdir:
-            logger.info(f"consider {s}")
+            # logger.info(f"consider {s}")
             f: Path = self.sandbox / s
             if f.exists():
                 node_hash.update(f.read_bytes())
@@ -69,17 +68,17 @@ class Node:
                     return None
         for (_, s) in self.sources:
             node: Node = self.get_node(s)
-            logger.info(f"inspect {node.label}")
+            # logger.info(f"inspect {node.label}")
             for (_, s2) in node.artefacts:
                 f: Path = self.sandbox / s2
-                logger.info(f"inspect artefact {f}")
+                # logger.info(f"inspect artefact {f}")
                 if f.exists():
                     node_hash.update(f.read_bytes())
                 else:
                     return None
             for dep in node.deps_in_srcdir:
                 f: Path = self.sandbox / dep
-                logger.info(f"inspect dep {f}")
+                # logger.info(f"inspect dep {f}")
                 if f.exists():
                     node_hash.update(f.read_bytes())
                 else:
@@ -117,7 +116,6 @@ class Node:
             j.update({'scanned_deps': [str(p) for p in self.deps_in_srcdir]})
         if not (self.is_source or self.is_scanned):
             j.update({'digest': self.deps_hash_hex()})
-            j.update({'ok_build': self.ok_build})
 
         return j
 
@@ -125,7 +123,7 @@ class Node:
     def status(self):
 
         if self.is_scanned:
-            return NodeStatus.SCANNED_PRESENT_DEP
+            assert False
 
         if self.is_source:
             if {(self.srcdir / s).exists() for (_, s) in self.artefacts} == {True}:
@@ -133,20 +131,18 @@ class Node:
             return NodeStatus.SOURCE_MISSING
 
         if {(self.sandbox / s).exists() for (_, s) in self.artefacts} == {True}:
-            if self.ok_build is not None and (self.ok_build == self.deps_hash_hex()):
-                return NodeStatus.BUILT_PRESENT
-            return NodeStatus.NEEDS_REBUILD
+            if self.stored_digest == self.deps_hash_hex():
+                return NodeStatus.BUILD_UP_TO_DATE
         return NodeStatus.BUILT_MISSING
 
 
 class NodeStatus(Enum):
     SOURCE_PRESENT = 1
-    SOURCE_MISSING = 2
-    BUILT_PRESENT = 3
-    BUILT_MISSING = 4
-    NEEDS_REBUILD = 5
-    SCANNED_PRESENT_DEP = 6
-    SCANNED_MISSING_DEP = 7
+    SOURCE_MISSING = auto()
+    BUILD_UP_TO_DATE = auto()
+    BUILT_MISSING = auto()
+    NEEDS_REBUILD = auto()
+    SCANNED_MISSING_DEP = auto()
 
 
 class RuleFailed(Exception):

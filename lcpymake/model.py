@@ -136,16 +136,16 @@ class World:
                     if not allow_missing:
                         raise SourceFileMissing(f)
                     continue
-                if node.status in {NodeStatus.SOURCE_PRESENT, NodeStatus.SOURCE_PRESENT,
-                                   NodeStatus.SCANNED_PRESENT_DEP}:
+                if node.status in {NodeStatus.SOURCE_PRESENT}:
                     (self.sandbox / f).parent.mkdir(parents=True, exist_ok=True)
                     (self.sandbox / f).write_bytes((self.srcdir / f).read_bytes())
                     continue
-                if node.status in {NodeStatus.BUILT_PRESENT, NodeStatus.BUILT_MISSING}:
+                if node.status in {NodeStatus.BUILD_UP_TO_DATE, NodeStatus.BUILT_MISSING}:
                     continue
                 raise Exception(f'implementation error {node.status.name}')
             for f in node.deps_in_srcdir:
-                (self.sandbox / f).write_bytes((self.srcdir / f).read_bytes())
+                if f.exists():
+                    (self.sandbox / f).write_bytes((self.srcdir / f).read_bytes())
 
     def _not_built(self):
         return [node for node in self.nodes
@@ -159,7 +159,7 @@ class World:
             if node_source.status in {NodeStatus.BUILT_MISSING, NodeStatus.SOURCE_MISSING,
                                       NodeStatus.NEEDS_REBUILD}:
                 return False
-            if node_source.status in {NodeStatus.BUILT_PRESENT, NodeStatus.SOURCE_PRESENT}:
+            if node_source.status in {NodeStatus.BUILD_UP_TO_DATE, NodeStatus.SOURCE_PRESENT}:
                 continue
             raise Exception(f'implementation error {node_source.status.name}')
         return True
@@ -190,15 +190,14 @@ class World:
         while True:
             logger.info("==== build iter")
             before = len(self._not_built())
+            logger.info(f"before : {before}")
             for node in self._can_be_built():
-                if (node.ok_build is not None) and node.ok_build == node.deps_hash_hex():
-                    continue
                 self._move_node_artefacts(node)
-                success = node.run()
-                if not success:
-                    raise RuleFailed(node.label, '')
-                self._check_rule_output(node)
-                node.ok_build = node.deps_hash_hex()
+                try:
+                    node.run()
+                    self._check_rule_output(node)
+                except Exception:
+                    False
             after = len(self._not_built())
             if after == 0:
                 self._stamp()

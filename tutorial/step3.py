@@ -2,7 +2,7 @@ from pathlib import Path
 import re
 
 from lcpymake import api
-from tutorial.cpp_rules import cpp_link, compile_rule
+from tutorial.cpp_rules import link_rule, compile_rule
 
 
 def scan_cpp(include_path):
@@ -61,7 +61,7 @@ def main():
                           sources=['main.cpp'], rule=compile_rule(include_path_compile))
 
     api.create_built_node(g, artefacts=['hello'], sources=[
-                          'mylibs/foolib/foo.o', 'mylibs/barlib/bar.o', 'main.o'], rule=cpp_link)
+                          'mylibs/foolib/foo.o', 'mylibs/barlib/bar.o', 'main.o'], rule=link_rule())
 
     # api.update_color_map(g,{"SOURCE_PRESENT": {"fg": 'White',"bg":"Red"}})
 

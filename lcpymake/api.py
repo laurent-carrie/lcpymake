@@ -55,5 +55,9 @@ def build(world):
     return world._build()
 
 
+def mount(world):
+    return world._mount(allow_missing=True)
+
+
 def update_color_map(_, d):
     color_map.update(d)

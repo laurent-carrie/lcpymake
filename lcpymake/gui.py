@@ -13,10 +13,9 @@ class MyColorEnum(Enum):
     CURSOR = auto()
     SOURCE_PRESENT = auto()
     SOURCE_MISSING = auto()
-    BUILT_PRESENT = auto()
+    BUILD_UP_TO_DATE = auto()
     BUILT_MISSING = auto()
     NEEDS_REBUILD = auto()
-    SCANNED_PRESENT_DEP = auto()
     SCANNED_MISSING_DEP = auto()
     DIGEST = auto()
 
@@ -37,10 +36,9 @@ def set_my_colors():
     bg = 115
     curses.init_pair(MyColorEnum.BG.value, -1, bg)
     curses.init_pair(MyColorEnum.SOURCE_PRESENT.value, 100, bg)
-    curses.init_pair(MyColorEnum.SOURCE_MISSING.value, 23, bg)
-    curses.init_pair(MyColorEnum.BUILT_PRESENT.value, 23, bg)
-    curses.init_pair(MyColorEnum.SCANNED_MISSING_DEP.value, 216, bg)
-    curses.init_pair(MyColorEnum.SCANNED_PRESENT_DEP.value, 180, bg)
+    curses.init_pair(MyColorEnum.SOURCE_MISSING.value, 23, 100)
+    curses.init_pair(MyColorEnum.BUILD_UP_TO_DATE.value, 20, bg)
+    curses.init_pair(MyColorEnum.BUILT_MISSING.value, 197, bg)
     curses.init_pair(MyColorEnum.RULE.value, 23, bg)
     curses.init_pair(MyColorEnum.CURSOR.value, 20, 200)
     curses.init_pair(MyColorEnum.NEEDS_REBUILD.value, 165, bg)
@@ -85,6 +83,8 @@ def splash(screen):
 
 
 def help(screen):
+    screen.erase()
+    screen.refresh()
 
     messages = [
         ("h", "this help, press again to return to main screen"),
@@ -98,6 +98,15 @@ def help(screen):
     for (a, b) in messages:
         screen.addstr(row, 0, f"{a} : {b}")
         row += 1
+
+    row = 15
+    screen.addstr(row, 0, "color codes : ")
+    row += 1
+    for data in MyColorEnum:
+        screen.addstr(row, 0, str(data.name), curses.color_pair(data.value))
+        row += 1
+
+    screen.refresh()
 
 
 def scan(screen, g):
@@ -199,38 +208,32 @@ def eval_command(screen, g):
     screen.addstr(0, 50, str(command))
     if command != -1:
         if command == ord('h'):
-            current = "help"
-        elif command == ord('t'):
-            current = "tree"
-            print_tree(screen, g)
-        elif command == ord('c'):
+            help(screen)
+            return
+
+        if command == ord('c'):
             hide_construction_command = not hide_construction_command
-        elif command == ord('d'):
+        if command == ord('d'):
             hide_deps = not hide_deps
-        elif command == ord('g'):
+        if command == ord('g'):
             hide_digest = not hide_digest
-        elif command == ord('s'):
-            current = "scan"
+        if command == ord('s'):
             scan(screen, g)
-            print_tree(screen, g)
-            current = "tree"
-        elif command == ord('b'):
-            current = "build"
+        if command == ord('b'):
             build(screen, g)
             scan(screen, g)
-            print_tree(screen, g)
-        elif command == ord('-') and max_depth > 0:
+        if command == ord('-') and max_depth > 0:
             max_depth -= 1
-        elif command == ord('+') and max_depth < 10:
+        if command == ord('+') and max_depth < 10:
             max_depth += 1
-        elif command == curses.KEY_UP:
+        if command == curses.KEY_UP:
             cursor_tree_offset -= 1
-        elif command == curses.KEY_DOWN:
+        if command == curses.KEY_DOWN:
             cursor_tree_offset += 1
-        elif command == ord('q'):
+        if command == ord('q'):
             exit(0)
-        else:
-            print("unknown command")
+
+        print_tree(screen, g)
 
 
 def _main(screen, g: model.World):

@@ -38,6 +38,3 @@ def link_rule():
         return p.returncode == 0
 
     return lcpymake.base.Rule(info, run)
-
-
-cpp_link: lcpymake.base.Rule = link_rule()
