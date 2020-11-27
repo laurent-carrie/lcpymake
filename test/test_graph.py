@@ -1,9 +1,7 @@
 from pathlib import Path
-# pylint:disable=E0401
 import pytest
-# pylint:enable=E0401
-import lcpymake.base
 from lcpymake import api
+from lcpymake import rule
 
 
 def dummy():
@@ -15,13 +13,10 @@ def dummy():
         print(sources)
         print(targets)
 
-    return lcpymake.base.Rule(info=info, run=run)
+    return rule.Rule(info=info, run=run)
 
 
 dummy_rule = dummy()
-
-
-# pylint:disable=R0201
 
 
 class TestGraph:
@@ -40,44 +35,4 @@ class TestGraph:
         api.create_built_node(g, artefacts=['hello'], sources=[
             'main.o', 'bar.o', 'foo.o'], rule=dummy_rule)
 
-        j1 = [{'artefacts': ['foo.cpp'], 'scanned_deps': [], 'status': 'SOURCE_MISSING'},
-              {'artefacts': ['bar.cpp'], 'scanned_deps': [], 'status': 'SOURCE_PRESENT'},
-              {'artefacts': ['main.cpp'], 'scanned_deps': [],
-                  'status': 'SOURCE_MISSING'},
-              {'artefacts': ['foo.o'],
-               'digest': None,
-               'ok_build': None,
-               'rule': "build target ['foo.o'] from sources ['foo.cpp']",
-               'sources': ['foo.cpp'],
-               'status': 'NEEDS_REBUILD'},
-              {'artefacts': ['bar.o'],
-               'digest': None,
-               'ok_build': None,
-               'rule': "build target ['bar.o'] from sources ['bar.cpp']",
-               'sources': ['bar.cpp'],
-               'status': 'BUILT_MISSING'},
-              {'artefacts': ['main.o'],
-               'digest': None,
-               'ok_build': None,
-               'rule': "build target ['main.o'] from sources ['main.cpp']",
-               'sources': ['main.cpp'],
-               'status': 'BUILT_MISSING'},
-              {'artefacts': ['hello'],
-               'digest': None,
-               'ok_build': None,
-               'rule': "build target ['hello'] from sources ['main.o', 'bar.o', 'foo.o']",
-               'sources': ['main.o', 'bar.o', 'foo.o'],
-               'status': 'BUILT_MISSING'}]
-        assert api.to_json(g) == j1
-
-        with pytest.raises(lcpymake.base.ArtefactSeenSeveralTimes):
-            api.create_source_node(g, 'main.cpp', scan=None)
-        assert api.to_json(g) == j1
-
-        with pytest.raises(api.NoSuchNode):
-            api.create_built_node(g, artefacts=['blah'], sources=[
-                'missing.cpp'], rule=dummy_rule)
-        assert api.to_json(g) == j1
-        print()
-        print()
-        api.gprint(g, nocolor=False)
+        assert len(g.nodes) == 7

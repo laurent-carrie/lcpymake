@@ -1,10 +1,8 @@
 from pathlib import Path
-
 import lcpymake.base
-from lcpymake import api
 
-# a rule that doesn't do anything
-# pylint:disable=W0613
+from lcpymake import api
+from lcpymake import Rule
 
 
 def do_nothing_rule():
@@ -15,7 +13,7 @@ def do_nothing_rule():
     def run(sources, targets):
         pass
 
-    return lcpymake.base.Rule(info, run)
+    return lcpymake.Rule(info, run)
 
 
 def main():

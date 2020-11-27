@@ -1,9 +1,9 @@
 import time
-from time import sleep
 import curses
 from enum import Enum, auto
 
-from lcpymake import model, base, logger
+import lcpymake.world
+from lcpymake import logger
 
 
 class MyColorEnum(Enum):
@@ -147,27 +147,27 @@ def print_tree(screen, g):
             return row
         col = 3
         # status = node.status
-        dots = '...' * indent
+        dots = '|--' * (indent) + '@'
         screen.addstr(row, col, dots)
         screen.addstr(row, col + len(dots), node.label,
                       curses.color_pair(MyColorEnum[node.status.name].value))
 
         row += 1
         if not node.is_source and not hide_construction_command:
-            dots = '...' * (indent + 1)
+            dots = '|  ' * indent + '|-- Rule: '
             screen.addstr(row, col, dots)
-            screen.addstr(row, col + len(dots), node.rule_info,
+            screen.addstr(row, col + len(dots), node.rule_info[0:curses.COLS - len(dots) - 3],
                           curses.color_pair(MyColorEnum.RULE.value))
             row += 1
         elif not hide_deps:
             for fdep in node.deps_in_srcdir:
-                dots = '...' * (indent + 1)
+                dots = '|  ' * indent + '|-- Deps: '
                 screen.addstr(row, col, dots)
                 screen.addstr(row, col + len(dots), str(fdep))
                 row += 1
 
         if not node.is_source and not node.is_scanned and not hide_digest:
-            dots = '...' * (indent + 1)
+            dots = '|  ' * indent + '|-- Digest: '
             screen.addstr(row, col, dots)
             screen.addstr(row, col + len(dots), node.deps_hash_hex()
                           or "None", curses.color_pair(MyColorEnum.DIGEST.value))
@@ -182,16 +182,16 @@ def print_tree(screen, g):
             row = print_tree(row, indent + 1, source_node)
         return row
 
-    for node in g._leaf_nodes():
+    for node in g.root_nodes():
         row = print_tree(row, 0, node)
 
     row += 1
     screen.addstr(row, 0, f"{len(g.nodes)} nodes ")
     row += 1
-    screen.addstr(row, 0, f"{len(g._leaf_artefacts())} leaves (source nodes)")
-    screen.move(first_row + cursor_tree_offset, 0)
-    screen.addstr(first_row + cursor_tree_offset, 0, '>',
-                  curses.color_pair(MyColorEnum.CURSOR.value))
+    # screen.addstr(row, 0, f"{len(g._leaf_artefacts())} leaves (source nodes)")
+    # screen.move(first_row + cursor_tree_offset, 0)
+    # screen.addstr(first_row + cursor_tree_offset, 0, '>',
+    # curses.color_pair(MyColorEnum.CURSOR.value))
 
     screen.refresh()
 
@@ -236,7 +236,7 @@ def eval_command(screen, g):
         print_tree(screen, g)
 
 
-def _main(screen, g: model.World):
+def _main(screen, g: lcpymake.world.World):
     global current
     global hide_construction_command
     global cursor_tree_offset

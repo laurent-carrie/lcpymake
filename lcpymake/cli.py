@@ -1,14 +1,10 @@
 import sys
 from pathlib import Path
-# pylint:disable=E0401
 import click
-# pylint:enable=E0401
-from lcpymake import model, base
-from lcpymake.gui import main as main_gui
 
-# pylint:disable=W0122
-# pylint:disable=W0123
-# pylint:disable=W0212
+import lcpymake.world
+from lcpymake import node
+from lcpymake.gui import main as main_gui
 
 
 @click.command()
@@ -31,17 +27,17 @@ def main(script, print_, build_, mount_, nocolor_, gui):
 
     try:
         g = eval('client_main()')
-    except (base.NoSuchNode) as e:
+    except ValueError as e:
         click.echo(click.style(str(type(e)), bg='red', fg='black'))
         click.echo(click.style(str(e), bg='red', fg='black'))
         sys.exit(1)
 
-    if not isinstance(g, model.World):
+    if not isinstance(g, lcpymake.world.World):
         raise ValueError(
             f'user function main does not return the expected type, it returns {type(g)}')
 
     if gui:
-        g._scan()
+        g.scan()
         main_gui(g)
         exit(0)
 
@@ -50,17 +46,13 @@ def main(script, print_, build_, mount_, nocolor_, gui):
     click.echo('sandbox : ', nl=False)
     click.echo(click.style(str(g.sandbox), bg='blue', fg='white'))
 
-    if print_:
-        g._scan()
-        g._print(nocolor_)
-
     if mount_:
-        g._mount(allow_missing=True)
+        g.mount(allow_missing=True)
 
     if build_:
         try:
-            g._mount(allow_missing=False)
-            g._build()
-        except (base.SourceFileMissing, base.RuleFailed) as e:
+            g.mount(allow_missing=False)
+            g.build()
+        except Exception as e:
             click.echo(click.style(str(type(e)), bg='red', fg='black'))
             click.echo(click.style(str(e), bg='red', fg='black'))

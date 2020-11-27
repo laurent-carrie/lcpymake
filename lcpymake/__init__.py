@@ -1,5 +1,6 @@
+from lcpymake.rule import Rule
 import logging
-from logging.handlers import SMTPHandler, RotatingFileHandler
+from logging.handlers import RotatingFileHandler
 
 logger = logging.getLogger(__name__)
 
