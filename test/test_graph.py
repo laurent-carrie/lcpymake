@@ -42,3 +42,10 @@ class TestGraph:
         assert len(g.nodes) == 7
         assert len(g.source_nodes) == 3
         assert len(g.root_nodes) == 1
+
+        # foo.cpp is missing, so no digest
+        n = [node for node in g.nodes if node.__repr__() == "foo.cpp"][0]
+        assert n.artefact_digest is None
+
+        n = [node for node in g.nodes if node.__repr__() == "bar.cpp"][0]
+        assert n.artefact_digest == "fe9580c53ad026094cb83c067a25b5b7d8988ee2417846e492841a953a734b2b"

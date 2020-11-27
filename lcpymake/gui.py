@@ -166,26 +166,33 @@ def print_tree(screen, g):
                 screen.addstr(row, col + len(dots), str(fdep))
                 row += 1
 
-        if not node.is_source and not hide_digest:
-            dots = '|  ' * indent + '|-- Digest: '
+        if not hide_digest:
+            dots = '|  ' * indent + '|-- Digest A: '
             screen.addstr(row, col, dots)
             screen.addstr(row, col + len(dots),
-                          # node.deps_hash_hex() or "None",
-                          "xxx",
+                          node.artefact_digest or "None",
                           curses.color_pair(MyColorEnum.DIGEST.value))
             row += 1
+            dots = '|  ' * indent + '|-- Digest S: '
             screen.addstr(row, col, dots)
             screen.addstr(row, col + len(dots),
                           # node.stored_digest or "None",
-                          "xxx",
+                          node.stored_digest or "None",
+                          curses.color_pair(MyColorEnum.DIGEST.value))
+            row += 1
+            dots = '|  ' * indent + '|-- Digest C: '
+            screen.addstr(row, col, dots)
+            screen.addstr(row, col + len(dots),
+                          # node.stored_digest or "None",
+                          node.current_digest or "None",
                           curses.color_pair(MyColorEnum.DIGEST.value))
             row += 1
 
-        for in_node in node.in_nodes:
+        for in_node in sorted(node.in_nodes, key=lambda node: node.__repr__()):
             row = print_tree(row, indent + 1, in_node)
         return row
 
-    for node in g.root_nodes:
+    for node in sorted(g.root_nodes, key=lambda node: node.__repr__()):
         row = print_tree(row, 0, node)
 
     row += 1

@@ -1,12 +1,13 @@
 import hashlib
 from enum import Enum, auto
 from pathlib import Path
-from typing import List, Tuple, Callable, Set
+from typing import List, Tuple, Callable, Set, Optional
 from lcpymake import logger
 
 
 class Node:
-    def __init__(self, srcdir: Path, sandbox: Path, artefacts: List[str], sources, rule, scan, get_node):
+    def __init__(self, srcdir: Path, sandbox: Path, artefacts: List[str], sources, rule,
+                 scan: Optional["Rule"], get_node):
         self.srcdir = srcdir
         self.sandbox = sandbox
         self.artefacts = artefacts
@@ -16,6 +17,9 @@ class Node:
         self.scan = scan
         self.rule = rule
         self.get_node = get_node
+        self.artefact_digest: Optional[str] = None
+        self.stored_digest = None
+        self.current_digest = None
 
     @property
     def is_source(self) -> bool:
