@@ -20,9 +20,6 @@ class MyColorEnum(Enum):
     DIGEST = auto()
 
 
-MyColors = {}
-
-
 def init_colors(stdscr):
     curses.start_color()
     curses.use_default_colors()
@@ -150,39 +147,45 @@ def print_tree(screen, g):
         dots = '|--' * (indent) + '@'
         screen.addstr(row, col, dots)
         screen.addstr(row, col + len(dots), node.label,
-                      curses.color_pair(MyColorEnum[node.status.name].value))
+                      curses.color_pair(MyColorEnum.RULE.value))
 
         row += 1
         if not node.is_source and not hide_construction_command:
             dots = '|  ' * indent + '|-- Rule: '
             screen.addstr(row, col, dots)
-            screen.addstr(row, col + len(dots), node.rule_info[0:curses.COLS - len(dots) - 3],
+            screen.addstr(row, col + len(dots),
+                          "xxx",
+                          # node.rule_info[0:curses.COLS - len(dots) - 3],
                           curses.color_pair(MyColorEnum.RULE.value))
             row += 1
         elif not hide_deps:
-            for fdep in node.deps_in_srcdir:
+            # for fdep in node.deps_in_srcdir:
+            for fdep in []:
                 dots = '|  ' * indent + '|-- Deps: '
                 screen.addstr(row, col, dots)
                 screen.addstr(row, col + len(dots), str(fdep))
                 row += 1
 
-        if not node.is_source and not node.is_scanned and not hide_digest:
+        if not node.is_source and not hide_digest:
             dots = '|  ' * indent + '|-- Digest: '
             screen.addstr(row, col, dots)
-            screen.addstr(row, col + len(dots), node.deps_hash_hex()
-                          or "None", curses.color_pair(MyColorEnum.DIGEST.value))
+            screen.addstr(row, col + len(dots),
+                          # node.deps_hash_hex() or "None",
+                          "xxx",
+                          curses.color_pair(MyColorEnum.DIGEST.value))
             row += 1
             screen.addstr(row, col, dots)
-            screen.addstr(row, col + len(dots), node.stored_digest or "None",
+            screen.addstr(row, col + len(dots),
+                          # node.stored_digest or "None",
+                          "xxx",
                           curses.color_pair(MyColorEnum.DIGEST.value))
             row += 1
 
-        for (_, source) in node.sources:
-            source_node = g._find_node(source)
-            row = print_tree(row, indent + 1, source_node)
+        for in_node in node.in_nodes:
+            row = print_tree(row, indent + 1, in_node)
         return row
 
-    for node in g.root_nodes():
+    for node in g.root_nodes:
         row = print_tree(row, 0, node)
 
     row += 1

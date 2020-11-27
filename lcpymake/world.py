@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import List, Callable
 from functools import wraps
-
+from typing import Set
 
 from lcpymake.node import Node
 
@@ -33,8 +33,8 @@ class World:
         self.sandbox = sandbox
         self.is_built = False
         sandbox.mkdir(parents=True, exist_ok=True)
-        self._root_nodes = set()
-        self._source_nodes = set()
+        self._root_nodes: Set[Node] = set()
+        self._source_nodes: Set[Node] = set()
 
     def find_node(self):
         return None
@@ -58,9 +58,7 @@ class World:
     @mark_unbuilt
     def add_source_node(self, artefact: str, scan: Callable[[str], List[str]]):
         new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
-                        artefacts=[('', artefact)], sources=[], rule=None, scan=scan, get_node=self.find_node)
-        new_node.is_scanned = False
-        new_node.is_source = True
+                        artefacts=[artefact], sources=[], rule=None, scan=scan, get_node=self.find_node)
         try:
             self.nodes.append(new_node)
             return new_node
@@ -71,11 +69,9 @@ class World:
     @mark_unbuilt
     def add_built_node(self, sources: List[str], artefacts: List[str], rule):
         new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
-                        artefacts=[('', artefact) for artefact in artefacts], sources=sources, rule=None,
+                        artefacts=artefacts, sources=sources, rule=None,
                         scan=None,
                         get_node=self.find_node)
-        new_node.is_scanned = False
-        new_node.is_source = False
         self.nodes.append(new_node)
         return new_node
 

@@ -2,7 +2,7 @@ from lcpymake.world import World
 
 
 def find_node_for_artefact(w, artefact: str):
-    candidates = [node for node in w.nodes if artefact in node.not_qualified_artefacts]
+    candidates = [node for node in w.nodes if artefact in node.artefacts]
     if len(candidates) > 2:
         raise ValueError(f"artefact {artefact} found in more than one node")
     if len(candidates) == 0:
