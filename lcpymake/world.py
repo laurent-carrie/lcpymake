@@ -20,7 +20,7 @@ def requires_built(func):
     def wrapped(self, *args, **kwargs):
         if not self.is_built:
             build_graph(self)
-            self.is_built = False
+            self.is_built = True
         return func(self, *args, **kwargs)
     return wrapped
 
@@ -34,13 +34,20 @@ class World:
         self.is_built = False
         sandbox.mkdir(parents=True, exist_ok=True)
         self._root_nodes = set()
+        self._source_nodes = set()
 
     def find_node(self):
         return None
 
+    @property
     @requires_built
     def root_nodes(self):
         return self._root_nodes
+
+    @property
+    @requires_built
+    def source_nodes(self):
+        return self._source_nodes
 
     def to_json(self):
         world_dict = [n.to_json() for n in self.nodes]
@@ -64,17 +71,13 @@ class World:
     @mark_unbuilt
     def add_built_node(self, sources: List[str], artefacts: List[str], rule):
         new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
-                        artefacts=[('', artefact) for artefact in artefacts], sources=[], rule=None,
+                        artefacts=[('', artefact) for artefact in artefacts], sources=sources, rule=None,
                         scan=None,
                         get_node=self.find_node)
         new_node.is_scanned = False
         new_node.is_source = False
-        try:
-            self.nodes.append(new_node)
-            return new_node
-        except Exception as exception:
-            self.nodes.pop()
-            raise exception
+        self.nodes.append(new_node)
+        return new_node
 
     def _mount(self, allow_missing):
         pass

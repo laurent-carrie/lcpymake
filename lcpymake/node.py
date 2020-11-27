@@ -12,9 +12,14 @@ class Node:
         self.artefacts = artefacts
         self.sources = sources
         self.in_nodes = set()
+        self.out_nodes = set()
         self.scan = scan
         self.rule = rule
         self.get_node = get_node
+
+    @property
+    def not_qualified_artefacts(self):
+        return [f for (_, f) in self.artefacts]
 
     def deps_hash_hex(self):
         if self.is_source:
@@ -34,6 +39,9 @@ class Node:
     def to_json(self):
         j = {}
         return j
+
+    def __repr__(self):
+        return ";".join([name for (_, name) in self.artefacts])
 
 
 class Rule:

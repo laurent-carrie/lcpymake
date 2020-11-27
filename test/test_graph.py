@@ -35,4 +35,10 @@ class TestGraph:
         api.create_built_node(g, artefacts=['hello'], sources=[
             'main.o', 'bar.o', 'foo.o'], rule=dummy_rule)
 
+        assert not g.is_built
+        g.source_nodes
+        assert g.is_built
+
         assert len(g.nodes) == 7
+        assert len(g.source_nodes) == 3
+        assert len(g.root_nodes) == 1
