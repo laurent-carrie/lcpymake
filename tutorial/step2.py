@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from lcpymake import api
-from tutorial.cpp_rules import compile_rule, cpp_link
+from tutorial.cpp_rules import compile_rule, link_rule
 
 
 def main():
@@ -36,6 +36,6 @@ def main():
     api.create_built_node(g, artefacts=['hello'],
                           sources=[
                               'mylibs/foolib/foo.o',
-                              'mylibs/barlib/bar.o'], rule=cpp_link)
+                              'mylibs/barlib/bar.o'], rule=link_rule())
 
     return g

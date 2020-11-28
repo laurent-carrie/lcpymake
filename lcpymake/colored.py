@@ -6,7 +6,8 @@ from sty import fg, bg, ef, rs
 # pylint:enable=E0401
 
 here = Path(__file__).parent
-data_colors = json.loads((here / 'colors.json').read_text())
+# data_colors = json.loads((here / 'colors.json').read_text())
+data_colors = {}
 
 
 @lru_cache(1)

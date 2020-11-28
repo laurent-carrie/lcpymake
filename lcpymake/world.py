@@ -19,7 +19,7 @@ def requires_built(func):
     @wraps(func)
     def wrapped(self, *args, **kwargs):
         if not self.is_built:
-            build_graph(self)
+            construct_graph(self)
             self.is_built = True
         return func(self, *args, **kwargs)
     return wrapped
@@ -69,7 +69,7 @@ class World:
     @mark_unbuilt
     def add_built_node(self, sources: List[str], artefacts: List[str], rule):
         new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
-                        artefacts=artefacts, sources=sources, rule=None,
+                        artefacts=artefacts, sources=sources, rule=rule,
                         scan=None,
                         get_node=self.find_node)
         self.nodes.append(new_node)
@@ -84,9 +84,10 @@ class World:
     def json_path(self) -> Path:
         return self.sandbox / 'lcpymake.json'
 
-    def _stamp(self):
+    def stamp(self):
         with open(str(self.json_path()), 'w') as fout:
             json.dump(self._to_json(), fout)
 
 
-from lcpymake.implem.build_graph import build_graph  # noqa E402
+from lcpymake.implem.construct_graph import construct_graph  # noqa E402
+from lcpymake.implem.build import build  # noqa E402

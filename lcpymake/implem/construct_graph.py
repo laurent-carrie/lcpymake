@@ -4,6 +4,7 @@ from pathlib import Path
 
 from lcpymake.world import World
 from lcpymake.node import Node
+from lcpymake.implem.digest import calculate_hash_of_node, calculate_hash_of_deps_of_node
 from lcpymake import logger
 
 
@@ -16,21 +17,6 @@ def find_node_for_artefact(w, artefact: str):
     if len(candidates) == 1:
         return candidates[0]
     return None
-
-
-def calculate_hash_of_node(w: World, node: Node):
-    logger.info(f"compute digest of {node.label}")
-    node_hash = hashlib.sha256()
-    for s in node.artefacts:
-        # logger.info(f"consider {s}")
-        f: Path = node.sandbox / s
-        if f.exists():
-            node_hash.update(f.read_bytes())
-        else:
-            return None
-    # @todo : add deps
-
-    return node_hash.hexdigest()
 
 
 def get_stored_hash(w: World, node: Node):
@@ -52,7 +38,7 @@ def _mount_sources(w: World):
                 (w.sandbox / f).write_bytes((w.srcdir / f).read_bytes())
 
 
-def build_graph(w: World):
+def construct_graph(w: World):
     for node in w.nodes:
         node.in_nodes = set()
         node.out_nodes = set()
@@ -77,6 +63,7 @@ def build_graph(w: World):
 
     # update digest
     for node in w.nodes:
-        node.artefact_digest = calculate_hash_of_node(w, node)
+        node.artefact_digest = calculate_hash_of_node(node)
+        node.current_digest = calculate_hash_of_deps_of_node(node)
 
     print("hello")

@@ -143,17 +143,23 @@ def print_tree(screen, g):
         if indent >= max_depth:
             return row
         col = 3
-        # status = node.status
-        dots = '|--' * (indent) + '@'
+        dots = "|.." * indent
         screen.addstr(row, col, dots)
-        screen.addstr(row, col + len(dots), node.label,
+        if node.is_source:
+            label = "S:"
+        else:
+            label = "@:"
+        screen.addstr(row, col + len(dots), label)
+        screen.addstr(row, col + len(dots) + len(label), node.label,
                       curses.color_pair(MyColorEnum.RULE.value))
 
         row += 1
         if not node.is_source and not hide_construction_command:
-            dots = '|  ' * indent + '|-- Rule: '
+            dots = "|.." * indent
             screen.addstr(row, col, dots)
-            screen.addstr(row, col + len(dots),
+            label = 'Rule:'
+            screen.addstr(row, col + len(dots), label)
+            screen.addstr(row, col + len(label) + len(dots),
                           "xxx",
                           # node.rule_info[0:curses.COLS - len(dots) - 3],
                           curses.color_pair(MyColorEnum.RULE.value))
@@ -161,28 +167,36 @@ def print_tree(screen, g):
         elif not hide_deps:
             # for fdep in node.deps_in_srcdir:
             for fdep in []:
-                dots = '|  ' * indent + '|-- Deps: '
+                dots = "|.." * indent
                 screen.addstr(row, col, dots)
-                screen.addstr(row, col + len(dots), str(fdep))
+                label = 'Deps:'
+                screen.addstr(row, col + len(dots), label)
+                screen.addstr(row, col + len(label) + len(dots), str(fdep))
                 row += 1
 
         if not hide_digest:
-            dots = '|  ' * indent + '|-- Digest A: '
+            dots = "|.." * indent
             screen.addstr(row, col, dots)
-            screen.addstr(row, col + len(dots),
+            label = 'A:'
+            screen.addstr(row, col + len(dots), label)
+            screen.addstr(row, col + len(label) + len(dots),
                           node.artefact_digest or "None",
                           curses.color_pair(MyColorEnum.DIGEST.value))
             row += 1
-            dots = '|  ' * indent + '|-- Digest S: '
+            dots = "|.." * indent
             screen.addstr(row, col, dots)
-            screen.addstr(row, col + len(dots),
+            label = 'S:'
+            screen.addstr(row, col + len(dots), label)
+            screen.addstr(row, col + len(label) + len(dots),
                           # node.stored_digest or "None",
                           node.stored_digest or "None",
                           curses.color_pair(MyColorEnum.DIGEST.value))
             row += 1
-            dots = '|  ' * indent + '|-- Digest C: '
+            dots = "|.." * indent
             screen.addstr(row, col, dots)
-            screen.addstr(row, col + len(dots),
+            label = 'C:'
+            screen.addstr(row, col + len(dots), label)
+            screen.addstr(row, col + len(label) + len(dots),
                           # node.stored_digest or "None",
                           node.current_digest or "None",
                           curses.color_pair(MyColorEnum.DIGEST.value))
@@ -259,7 +273,7 @@ def _main(screen, g: lcpymake.world.World):
     # curses.curs_set(0)  # Hide the cursor
     screen.nodelay(True)  # Don't block I/O calls
     set_my_colors()
-
+    print_tree(screen, g)
     while True:
 
         screen.addstr(1, 0, f"srcdir  : {g.srcdir}")

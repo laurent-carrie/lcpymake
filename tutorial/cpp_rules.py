@@ -1,7 +1,7 @@
 import subprocess
 from typing import List
 from pathlib import Path
-import lcpymake.base
+from lcpymake.rule import Rule
 
 
 def compile_rule(include_path: List[Path]):
@@ -21,7 +21,7 @@ def compile_rule(include_path: List[Path]):
         print(p.args)
         return p.returncode == 0
 
-    return lcpymake.base.Rule(info, run)
+    return Rule(info, run)
 
 
 def link_rule():
@@ -37,4 +37,4 @@ def link_rule():
         print(p.args)
         return p.returncode == 0
 
-    return lcpymake.base.Rule(info, run)
+    return Rule(info, run)
