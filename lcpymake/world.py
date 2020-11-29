@@ -3,8 +3,6 @@ from pathlib import Path
 from typing import List, Callable
 from functools import wraps
 from typing import Set
-from lcpymake import logger
-from lcpymake.node import Node
 
 
 def mark_unbuilt(func):
@@ -103,3 +101,5 @@ class World:
 
 from lcpymake.implem.construct_graph import construct_graph  # noqa E402
 from lcpymake.implem.build import build_one_step  # noqa E402
+from lcpymake import logger  # noqa E402
+from lcpymake.node import Node  # noqa E402

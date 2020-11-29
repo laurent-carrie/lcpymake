@@ -1,5 +1,3 @@
-from lcpymake.world import World
-from lcpymake.rule import Rule
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -18,3 +16,7 @@ logger.addHandler(file_handler)
 
 logger.setLevel(logging.INFO)
 logger.info("lcpymake startup")
+
+
+from lcpymake.world import World  # noqa E402
+from lcpymake.rule import Rule  # noqa E$02
