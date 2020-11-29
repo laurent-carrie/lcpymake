@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import List, Callable
 from functools import wraps
 from typing import Set
-
+from lcpymake import logger
 from lcpymake.node import Node
 
 
@@ -35,6 +35,7 @@ class World:
         sandbox.mkdir(parents=True, exist_ok=True)
         self._root_nodes: Set[Node] = set()
         self._source_nodes: Set[Node] = set()
+        self._first_candidate_for_build = None
 
     def find_node(self):
         return None
@@ -49,16 +50,26 @@ class World:
     def source_nodes(self):
         return self._source_nodes
 
+    @property
+    @requires_built
+    def first_candidate_for_build(self):
+        return self._first_candidate_for_build
+
+    @requires_built
     def to_json(self):
-        world_dict = [n.to_json() for n in self.nodes]
+        world_dict = {}
+        for node in self.nodes:
+            j = node.to_json()
+            world_dict.update({j["id"]: j})
+        world_dict["root_nodes"] = [node.__repr__() for node in self.root_nodes]
+        world_dict["source_nodes"] = [node.__repr__() for node in self.source_nodes]
         world_dict_str = json.dumps(world_dict)
         j = json.loads(world_dict_str)
         return j
 
     @mark_unbuilt
     def add_source_node(self, artefact: str, scan: Callable[[str], List[str]]):
-        new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
-                        artefacts=[artefact], sources=[], rule=None, scan=scan, get_node=self.find_node)
+        new_node = Node(artefacts=[artefact], sources=[], rule=None, scan=scan)
         try:
             self.nodes.append(new_node)
             return new_node
@@ -68,18 +79,10 @@ class World:
 
     @mark_unbuilt
     def add_built_node(self, sources: List[str], artefacts: List[str], rule):
-        new_node = Node(srcdir=self.srcdir, sandbox=self.sandbox,
-                        artefacts=artefacts, sources=sources, rule=rule,
-                        scan=None,
-                        get_node=self.find_node)
+        new_node = Node(artefacts=artefacts, sources=sources, rule=rule,
+                        scan=None)
         self.nodes.append(new_node)
         return new_node
-
-    def _mount(self, allow_missing):
-        pass
-
-    def scan(self):
-        pass
 
     def json_path(self) -> Path:
         return self.sandbox / 'lcpymake.json'
@@ -88,6 +91,15 @@ class World:
         with open(str(self.json_path()), 'w') as fout:
             json.dump(self._to_json(), fout)
 
+    @mark_unbuilt
+    def touch(self):
+        pass
+
+    @mark_unbuilt
+    def build_one_step(self):
+        logger.info("build_one_step")
+        build_one_step(self)
+
 
 from lcpymake.implem.construct_graph import construct_graph  # noqa E402
-from lcpymake.implem.build import build  # noqa E402
+from lcpymake.implem.build import build_one_step  # noqa E402

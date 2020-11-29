@@ -2,7 +2,7 @@ import time
 import curses
 from enum import Enum, auto
 
-import lcpymake.world
+from lcpymake import World
 from lcpymake import logger
 
 
@@ -111,17 +111,17 @@ def scan(screen, g):
     screen.erase()
     screen.addstr(10, 10, "scanning...")
     screen.refresh()
-    g._scan()
 
 
 def build(screen, g):
     screen.erase()
     screen.addstr(10, 10, "build...")
     screen.refresh()
-    g._build()
+    logger.info("build_one_step")
+    g.build_one_step()
 
 
-def print_tree(screen, g):
+def print_tree(screen, g: World):
     screen.erase()
     screen.refresh()
     splash(screen)
@@ -139,17 +139,24 @@ def print_tree(screen, g):
     if cursor_tree_offset < 0:
         cursor_tree_offset = 0
 
+    g.is_built = False
+
     def print_tree(row, indent, node):
         if indent >= max_depth:
             return row
         col = 3
         dots = "|.." * indent
         screen.addstr(row, col, dots)
-        if node.is_source:
+        if node == g.first_candidate_for_build:
+            label = ">:"
+            attribs = curses.A_BLINK | curses.A_REVERSE
+        elif node.is_source:
             label = "S:"
+            attribs = curses.A_NORMAL
         else:
             label = "@:"
-        screen.addstr(row, col + len(dots), label)
+            attribs = curses.A_NORMAL
+        screen.addstr(row, col + len(dots), label, attribs)
         screen.addstr(row, col + len(dots) + len(label), node.label,
                       curses.color_pair(MyColorEnum.RULE.value))
 
@@ -244,8 +251,8 @@ def eval_command(screen, g):
         if command == ord('s'):
             scan(screen, g)
         if command == ord('b'):
+            logger.info('build')
             build(screen, g)
-            scan(screen, g)
         if command == ord('-') and max_depth > 0:
             max_depth -= 1
         if command == ord('+') and max_depth < 10:
@@ -260,7 +267,7 @@ def eval_command(screen, g):
         print_tree(screen, g)
 
 
-def _main(screen, g: lcpymake.world.World):
+def _main(screen, g: World):
     global current
     global hide_construction_command
     global cursor_tree_offset

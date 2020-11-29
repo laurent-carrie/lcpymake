@@ -1,3 +1,4 @@
+from lcpymake.world import World
 from lcpymake.rule import Rule
 import logging
 from logging.handlers import RotatingFileHandler

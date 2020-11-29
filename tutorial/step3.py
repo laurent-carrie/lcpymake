@@ -1,33 +1,14 @@
 from pathlib import Path
 import re
 
-from lcpymake import api
-from tutorial.cpp_rules import link_rule, compile_rule
-
-
-def scan_cpp(include_path):
-    def _scan_cpp(filename):
-        r = re.compile("#include +\"(.*)\".*")
-        ret = []
-        with open(str(filename), 'r') as fin:
-            for line in fin.readlines():
-                match = re.match(r, line)
-                if match:
-                    depfile = match.group(1)
-                    for p in include_path:
-                        d: Path = p / depfile
-                        if not d.exists():
-                            continue
-                        ret.append(d)
-
-        return ret
-    return _scan_cpp
+from lcpymake import api, logger
+from lcpymake.basic_cpp_rules import link_rule, compile_rule, scan_cpp
 
 
 def main():
 
     # step 1 : we declare a build graph, using nodes and explicit rules
-    # using implicit rules, implemeting rules and scanner will come later
+    # using implicit rules, implementing rules and scanner will come later
 
     here = Path(__file__).parent
 
