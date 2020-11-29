@@ -12,15 +12,13 @@ from lcpymake.gui import main as main_gui
               help='print build tree')
 @click.option('--script', required=True, type=str,
               help='python script to build graph')
-@click.option('--mount', 'mount_', required=False, default=False, is_flag=True,
-              help='mount source files into sandbox')
 @click.option('--build', 'build_', required=False, default=False, is_flag=True,
               help='run a build')
 @click.option('--no-color', 'nocolor_', required=False, default=False, is_flag=True,
               help='print graph without color (useful when redirecting to a file)')
 @click.option('--gui', required=False, default=False, is_flag=True,
               help='run interactive gui (requires curses)')
-def main(script, print_, build_, mount_, nocolor_, gui):
+def main(script, print_, build_, nocolor_, gui):
     print(f'hello world {script}')
     sys.path.append(str(Path(script).absolute().parent))
     exec(f"from {str(Path(script).with_suffix('').name)} import main as client_main")
@@ -37,7 +35,7 @@ def main(script, print_, build_, mount_, nocolor_, gui):
             f'user function main does not return the expected type, it returns {type(g)}')
 
     if gui:
-        g.scan()
+        g.touch()
         main_gui(g)
         exit(0)
 
@@ -46,13 +44,16 @@ def main(script, print_, build_, mount_, nocolor_, gui):
     click.echo('sandbox : ', nl=False)
     click.echo(click.style(str(g.sandbox), bg='blue', fg='white'))
 
-    if mount_:
-        g.mount(allow_missing=True)
-
     if build_:
         try:
-            g.mount(allow_missing=False)
-            g.build()
+            g.touch()
+            while True:
+                candidate = g.first_candidate_for_build
+                if candidate is None:
+                    print("Done !")
+                    break
+                print(f"building {candidate}")
+                g.build_one_step()
         except Exception as e:
             click.echo(click.style(str(type(e)), bg='red', fg='black'))
             click.echo(click.style(str(e), bg='red', fg='black'))

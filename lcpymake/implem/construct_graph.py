@@ -52,6 +52,21 @@ def reset_node(node):
     node.artefact_digest = None
 
 
+def load_cached_digest(w: World):
+    try:
+        if w.json_path().exists():
+            with open(str(w.json_path()), 'r') as fin:
+                j = json.load(fin)
+                for node in w.nodes:
+                    try:
+                        node.cached_digest = j[node.__repr__()]["cached_digest"]
+                        node.stored_digest = node.cached_digest
+                    except KeyError as e:
+                        logger.error(f"key not found : {e}")
+    except Exception as e:
+        logger.error(e)
+
+
 def construct_graph(w: World):
     for node in w.nodes:
         reset_node(node)
@@ -110,4 +125,3 @@ def construct_graph(w: World):
         node.current_digest = calculate_hash_of_deps_of_node(node)
 
     w._first_candidate_for_build = find_first_candidate_for_build(w)
-    logger.info(f"candidate is {w._first_candidate_for_build}")

@@ -106,13 +106,6 @@ def help(screen):
     screen.refresh()
 
 
-def scan(screen, g):
-    logger.info("scan")
-    screen.erase()
-    screen.addstr(10, 10, "scanning...")
-    screen.refresh()
-
-
 def build(screen, g):
     screen.erase()
     screen.addstr(10, 10, "build...")
@@ -140,6 +133,13 @@ def print_tree(screen, g: World):
         cursor_tree_offset = 0
 
     g.is_built = False
+
+    candidate = g.first_candidate_for_build
+    if candidate is None:
+        screen.addstr(row, 3, "Nothing to build.")
+    else:
+        screen.addstr(row, 3, f"candidate : {candidate}")
+    row += 2
 
     def print_tree(row, indent, node):
         if indent >= max_depth:
@@ -208,6 +208,15 @@ def print_tree(screen, g: World):
                           node.current_digest or "None",
                           curses.color_pair(MyColorEnum.DIGEST.value))
             row += 1
+            dots = "|.." * indent
+            screen.addstr(row, col, dots)
+            label = 'H:'
+            screen.addstr(row, col + len(dots), label)
+            screen.addstr(row, col + len(label) + len(dots),
+                          # node.stored_digest or "None",
+                          node.cached_digest or "None",
+                          curses.color_pair(MyColorEnum.DIGEST.value))
+            row += 1
 
         for in_node in sorted(node.in_nodes, key=lambda node: node.__repr__()):
             row = print_tree(row, indent + 1, in_node)
@@ -248,8 +257,6 @@ def eval_command(screen, g):
             hide_deps = not hide_deps
         if command == ord('g'):
             hide_digest = not hide_digest
-        if command == ord('s'):
-            scan(screen, g)
         if command == ord('b'):
             logger.info('build')
             build(screen, g)

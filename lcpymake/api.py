@@ -3,7 +3,6 @@ from pathlib import Path
 
 from lcpymake.world import World
 from lcpymake.node import Rule
-from lcpymake.colored import color_map
 
 
 def create(srcdir: Path, sandbox: Path):
@@ -41,7 +40,3 @@ def build(world):
 
 def mount(world):
     return world._mount(allow_missing=True)
-
-
-def update_color_map(_, d):
-    color_map.update(d)

@@ -13,7 +13,7 @@ class Rule:
 
 
 class Node:
-    def __init__(self, artefacts: List[str], sources, rule: Rule,
+    def __init__(self, artefacts: List[str], sources, rule: Optional[Rule],
                  scan):
         self.artefacts = artefacts
         self.sources = sources
@@ -22,8 +22,9 @@ class Node:
         self.scan = scan
         self.rule = rule
         self.artefact_digest: Optional[str] = None
-        self.stored_digest = None
-        self.current_digest = None
+        self.stored_digest: Optional[str] = None
+        self.current_digest: Optional[str] = None
+        self.cached_digest: Optional[str] = None
 
     @property
     def is_source(self) -> bool:
@@ -45,7 +46,8 @@ class Node:
             "out": [node.__repr__() for node in self.out_nodes],
             "artefact_digest": self.artefact_digest,
             "stored_digest": self.stored_digest,
-            "current_digest": self.current_digest
+            "current_digest": self.current_digest,
+            "cached_digest": self.current_digest
         }
         return j
 

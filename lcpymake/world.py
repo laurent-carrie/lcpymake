@@ -59,8 +59,8 @@ class World:
         for node in self.nodes:
             j = node.to_json()
             world_dict.update({j["id"]: j})
-        world_dict["root_nodes"] = [node.__repr__() for node in self.root_nodes]
-        world_dict["source_nodes"] = [node.__repr__() for node in self.source_nodes]
+        world_dict["root_nodes"] = [node.__repr__() for node in self._root_nodes]
+        world_dict["source_nodes"] = [node.__repr__() for node in self._source_nodes]
         world_dict_str = json.dumps(world_dict)
         j = json.loads(world_dict_str)
         return j
@@ -87,7 +87,7 @@ class World:
 
     def stamp(self):
         with open(str(self.json_path()), 'w') as fout:
-            json.dump(self._to_json(), fout)
+            json.dump(self.to_json(), fout)
 
     @mark_unbuilt
     def touch(self):

@@ -58,6 +58,7 @@ def build_one_step(w: World):
         logger.info(candidate.rule.info)
         success = candidate.rule.run(sources=sources, targets=artefacts)
         candidate.stored_digest = candidate.current_digest
+        w.stamp()
         return success
     except Exception as e:
         logger.error(f"failed to run rule {candidate.rule.info}")
